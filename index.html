@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7"></script>
+    <!-- Confetti JS -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         body {
@@ -137,9 +139,6 @@
         }
         /* Connection indicator */
         .connection-indicator {
-            position: fixed;
-            top: 20px;
-            left: 20px;
             width: 20px;
             height: 20px;
             border-radius: 50%;
@@ -171,47 +170,16 @@
             width: 100%;
             max-width: 400px;
         }
-        .user-info {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-            background-color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            z-index: 1000;
-        }
-        .settings-dropdown {
-            position: relative;
-            display: inline-block;
-        }
-        .settings-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            background-color: white;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1001;
-            border-radius: 0.375rem;
-            overflow: hidden;
-        }
-        .settings-content a {
-            color: black;
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-        }
-        .settings-content a:hover {
-            background-color: #f1f1f1;
-        }
+        
     </style>
 </head>
 <body>
-    <!-- Connection Indicator -->
-    <div id="connectionIndicator" class="connection-indicator connecting"></div>
+    
+    
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed top-5 right-5 p-4 rounded-lg shadow-lg text-white hidden transition-opacity duration-300 opacity-0 z-50">
+        <p id="toastMessage"></p>
+    </div>
     
     <!-- Login Form -->
     <div id="loginContainer" class="login-container">
@@ -229,6 +197,7 @@
             <button id="loginBtn" class="w-full btn-primary py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                 Giriş Yap
             </button>
+            
         </div>
     </div>
 
@@ -265,25 +234,23 @@
     <!-- Main App -->
     <div id="mainApp" class="hidden">
         <!-- User Info -->
-        <div id="userInfo" class="user-info">
-            <span class="text-gray-700 mr-3">Hoş geldin, <span id="currentUser" class="font-medium"></span></span>
-            <div class="settings-dropdown">
-                <button class="text-gray-600 hover:text-gray-900 focus:outline-none">
+        <nav class="bg-white shadow-md py-4 px-6 flex justify-between items-center">
+            <div class="flex items-center">
+                <h1 class="text-2xl font-bold text-black mr-3">101Anayasa</h1>
+                <div id="connectionIndicator" class="connection-indicator connecting"></div>
+            </div>
+            <div id="userInfo" class="flex items-center">
+                <span class="text-gray-700 mr-3">Hoş geldin, <span id="currentUser" class="font-medium"></span></span>
+                <button id="settingsBtn" class="text-gray-600 hover:text-gray-900 focus:outline-none mr-3">
                     <i class="fas fa-cog"></i> Ayarlar
                 </button>
-                <div id="settingsContent" class="settings-content">
-                    <a href="#" id="changePasswordLink"><i class="fas fa-key mr-2"></i>Şifre Değiştir</a>
-                    <a href="#" id="logoutLink"><i class="fas fa-sign-out-alt mr-2"></i>Çıkış</a>
-                </div>
+                <button id="logoutBtn" class="text-gray-600 hover:text-gray-900 focus:outline-none">
+                    <i class="fas fa-sign-out-alt"></i> Çıkış
+                </button>
             </div>
-        </div>
+        </nav>
 
         <div class="container mx-auto px-4 py-8 max-w-6xl">
-            <!-- Header -->
-            <header class="mb-10 text-center border-b border-gray-200 pb-6">
-                <h1 class="text-4xl font-bold text-black mb-2">Oyun Puan Takip Sistemi</h1>
-                <p class="text-gray-600">101 Okey, Uno ve diğer oyunlar için puan takip uygulaması</p>
-            </header>
             <!-- Navigation Tabs -->
             <div class="nav-tabs mb-8">
                 <div class="nav-tabs-container border-b border-gray-300">
@@ -298,6 +265,9 @@
                     </button>
                     <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="game-types">
                         <i class="fas fa-gamepad mr-2"></i>Oyun Türleri
+                    </button>
+                    <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="constitution">
+                        <i class="fas fa-book mr-2"></i>101 Anayasa
                     </button>
                     <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="stats">
                         <i class="fas fa-chart-bar mr-2"></i>İstatistikler
@@ -401,6 +371,15 @@
                 <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
                     <h2 class="text-2xl font-bold text-black mb-6">Oyuncu Yönetimi</h2>
                     
+                    <div class="mb-6">
+                        <div class="flex">
+                            <input type="text" id="newPlayerName" placeholder="Yeni oyuncu adı" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <button id="addPlayerBtn" class="btn-primary px-6 py-2 rounded-r-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                <i class="fas fa-plus mr-2"></i>Ekle
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="mb-8">
                         <h3 class="text-xl font-semibold text-gray-700 mb-4">Aktif Oyuncular</h3>
                         <div class="overflow-x-auto">
@@ -465,6 +444,54 @@
                     </div>
                 </div>
             </div>
+            <!-- Constitution Tab Content -->
+            <div id="constitution" class="tab-content">
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                    <h2 class="text-2xl font-bold text-black mb-6">101 Anayasa Kitapçığı</h2>
+                    
+                    <!-- Constitution Articles -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold text-black">Onaylı Anayasa Maddeleri</h3>
+                            <a href="#" id="viewConstitutionBookBtn" class="text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                                <i class="fas fa-external-link-alt mr-2"></i>Kitapçığı Görüntüle
+                            </a>
+                        </div>
+                        <div id="constitutionArticles" class="space-y-4">
+                            <!-- Approved articles will be displayed here -->
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-book text-4xl mb-3"></i>
+                                <p>Henüz onaylı anayasa maddesi bulunmamaktadır.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Add New Article Suggestion -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-xl font-semibold text-black mb-4">Yeni Madde Önerisi</h3>
+                        <div class="mb-4">
+                            <label for="newArticleContent" class="block text-gray-700 font-medium mb-2">Madde İçeriği</label>
+                            <textarea id="newArticleContent" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500" placeholder="Anayasa maddesi önerinizi buraya yazın..."></textarea>
+                        </div>
+                        <button id="addArticleSuggestionBtn" class="btn-primary px-6 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <i class="fas fa-plus mr-2"></i>Öneri Gönder
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pending Article Suggestions -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-black mb-4">Bekleyen Madde Önerileri</h3>
+                    <div id="pendingArticles" class="space-y-4">
+                        <!-- Pending articles will be displayed here -->
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-clock text-4xl mb-3"></i>
+                            <p>Bekleyen madde önerisi bulunmamaktadır.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Stats Tab Content -->
             <div id="stats" class="tab-content">
                 <div class="bg-white border border-gray-200 rounded-lg p-6">
@@ -551,6 +578,21 @@
         </div>
     </div>
     
+    <!-- Game End Celebration Modal -->
+    <div id="gameEndModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md border border-gray-200 p-6 text-center">
+            <i class="fas fa-trophy text-yellow-500 text-6xl mb-4"></i>
+            <h3 class="text-3xl font-bold text-black mb-4">Oyun Bitti!</h3>
+            <p class="text-gray-700 text-xl mb-4">Kazanan(lar):</p>
+            <div id="gameEndWinners" class="text-2xl font-semibold text-gray-900 mb-6">
+                <!-- Winner names will be inserted here -->
+            </div>
+            <button id="closeGameEndModalBtn" class="px-6 py-3 btn-primary rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                Tamam
+            </button>
+        </div>
+    </div>
+    
     <!-- Confirmation Modal -->
     <div id="confirmModal" class="modal">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md border border-gray-200">
@@ -564,6 +606,24 @@
                     <button id="confirmBtn" class="px-4 py-2 btn-danger text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-gray-500">
                         Onayla
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Constitution Book Modal -->
+    <div id="constitutionBookModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl border border-gray-200 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-black">📖 101 Anayasa Kitapçığı</h3>
+                    <button id="closeConstitutionBookBtn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div id="constitutionBookContent" class="space-y-6">
+                    <!-- Constitution book content will be dynamically added here -->
                 </div>
             </div>
         </div>
@@ -582,7 +642,9 @@
             gameTypes: [],
             games: [],
             stats: {},
-            history: []
+            history: [],
+            constitutionArticles: [],
+            articleSuggestions: []
         };
 
         // Current game state
@@ -604,6 +666,7 @@
         const loginBtn = document.getElementById('loginBtn');
         const loginError = document.getElementById('loginError');
         const changePasswordModal = document.getElementById('changePasswordModal');
+        const settingsBtn = document.getElementById('settingsBtn'); // Added
         const currentPasswordInput = document.getElementById('currentPassword');
         const newPasswordInput = document.getElementById('newPassword');
         const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
@@ -612,9 +675,7 @@
         const confirmChangePasswordBtn = document.getElementById('confirmChangePasswordBtn');
         const userInfo = document.getElementById('userInfo');
         const currentUserSpan = document.getElementById('currentUser');
-        const settingsContent = document.getElementById('settingsContent');
-        const changePasswordLink = document.getElementById('changePasswordLink');
-        const logoutLink = document.getElementById('logoutLink');
+        const logoutBtn = document.getElementById('logoutBtn');
         const connectionIndicator = document.getElementById('connectionIndicator');
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -624,12 +685,23 @@
         const confirmBtn = document.getElementById('confirmBtn');
         const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
 
+        // DOM Elements for Toast
+        const toastNotification = document.getElementById('toastNotification');
+        const toastMessage = document.getElementById('toastMessage');
+
+        const gameEndModal = document.getElementById('gameEndModal');
+        const gameEndWinnersDiv = document.getElementById('gameEndWinners');
+        const closeGameEndModalBtn = document.getElementById('closeGameEndModalBtn');
+        const constitutionBookModal = document.getElementById('constitutionBookModal');
+        const closeConstitutionBookBtn = document.getElementById('closeConstitutionBookBtn');
+
         // Check if user is logged in
-        function checkLoggedInUser() {
+        async function checkLoggedInUser() {
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
                 showMainApp();
+                await initApp();
             } else {
                 showLoginForm();
             }
@@ -733,7 +805,8 @@
                     newPasswordInput.value = '';
                     confirmNewPasswordInput.value = '';
                     
-                    alert('Şifreniz başarıyla değiştirildi.');
+                    showToast('Şifreniz başarıyla değiştirildi.', 'success');
+                    switchTab('home'); // Redirect to homepage
                 } else {
                     changePasswordError.textContent = 'Mevcut şifre hatalı.';
                     changePasswordError.classList.remove('hidden');
@@ -752,13 +825,8 @@
 
         // Close change password modal
         function closeChangePasswordModal() {
-            changePasswordModal.classList.remove('active');
+            changePasswordModal.classList.add('hidden');
             changePasswordError.classList.add('hidden');
-        }
-
-        // Toggle settings dropdown
-        function toggleSettingsDropdown() {
-            settingsContent.style.display = settingsContent.style.display === 'block' ? 'none' : 'block';
         }
 
         // Update connection indicator
@@ -810,23 +878,8 @@
                 if (gamesError) throw gamesError;
                 appData.games = gamesData || [];
 
-                // Load stats
-                const { data: statsData, error: statsError } = await supabase
-                    .from('stats')
-                    .select('*');
-                
-                if (statsError) throw statsError;
-                
-                // Convert stats to the format we need
+                // Stats will be calculated dynamically based on finished games
                 appData.stats = {};
-                if (statsData) {
-                    statsData.forEach(stat => {
-                        if (!appData.stats[stat.player_id]) {
-                            appData.stats[stat.player_id] = {};
-                        }
-                        appData.stats[stat.player_id][stat.game_type_key] = stat.wins;
-                    });
-                }
 
                 // Load history
                 const { data: historyData, error: historyError } = await supabase
@@ -837,6 +890,26 @@
                 if (historyError) throw historyError;
                 appData.history = historyData || [];
 
+                // Load constitution articles
+                const { data: articlesData, error: articlesError } = await supabase
+                    .from('constitution_articles')
+                    .select('*')
+                    .eq('status', 'approved')
+                    .order('article_number', { ascending: true });
+                
+                if (articlesError) throw articlesError;
+                appData.constitutionArticles = articlesData || [];
+
+                // Load article suggestions
+                const { data: suggestionsData, error: suggestionsError } = await supabase
+                    .from('article_suggestions')
+                    .select('*')
+                    .eq('status', 'pending')
+                    .order('created_at', { ascending: false });
+                
+                if (suggestionsError) throw suggestionsError;
+                appData.articleSuggestions = suggestionsData || [];
+
                 // Render all components
                 renderPlayers();
                 renderPlayerSelection();
@@ -844,6 +917,8 @@
                 renderActiveGames();
                 renderAllGames();
                 renderStats();
+                renderConstitutionArticles();
+                renderPendingArticles();
                 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -941,7 +1016,16 @@
             document.getElementById('endGameBtn').addEventListener('click', endGame);
             document.getElementById('toggleHistoryBtn').addEventListener('click', toggleGameHistory);
             document.getElementById('gameFormat').addEventListener('change', toggleTeamSelection);
-            cancelConfirmBtn.addEventListener('click', closeConfirmModal);
+                    document.getElementById('addArticleSuggestionBtn').addEventListener('click', addArticleSuggestion);
+        document.getElementById('viewConstitutionBookBtn').addEventListener('click', openConstitutionBook);
+        cancelChangePasswordBtn.addEventListener('click', closeChangePasswordModal);
+                    closeGameEndModalBtn.addEventListener('click', () => {
+            gameEndModal.classList.remove('active');
+        });
+
+        closeConstitutionBookBtn.addEventListener('click', () => {
+            constitutionBookModal.classList.remove('active');
+        });
             
             // Game filter buttons
             document.getElementById('filterAllBtn').addEventListener('click', () => filterGames('all'));
@@ -954,6 +1038,7 @@
 
         // Set up real-time subscriptions
         function setupRealtimeSubscriptions() {
+            console.log('Setting up Realtime Subscriptions...');
             // Players subscription
             const playersChannel = supabase
                 .channel('players-changes')
@@ -988,8 +1073,47 @@
                     schema: 'public', 
                     table: 'games' 
                 }, (payload) => {
-                    console.log('Games change:', payload);
-                    loadDataFromSupabase();
+                    console.log('--- Realtime Games Change Received ---');
+                    console.log('Full Payload:', payload);
+                    console.log('Current Game ID (local):', currentGame ? currentGame.id : 'N/A');
+                    console.log('Payload New ID:', payload.new ? payload.new.id : 'N/A');
+                    console.log('Payload New Rounds:', payload.new && payload.new.rounds ? payload.new.rounds : 'N/A');
+                    console.log('Payload Event Type:', payload.eventType);
+
+                    // Update appData.games based on the event type
+                    const updatedGameIndex = appData.games.findIndex(g => g.id === payload.new.id);
+                    if (payload.eventType === 'UPDATE') {
+                        if (updatedGameIndex !== -1) {
+                            appData.games[updatedGameIndex] = payload.new;
+                        }
+                    } else if (payload.eventType === 'INSERT') {
+                        appData.games.unshift(payload.new); // Add new game to the top
+                    } else if (payload.eventType === 'DELETE') {
+                        appData.games = appData.games.filter(g => g.id !== payload.old.id); // Remove deleted game
+                    }
+
+                    // If the change is for the currently viewed game, re-open the game view
+                    if (currentGame && payload.new && payload.new.id === currentGame.id) {
+                        console.log('Realtime: Matched current game. Re-opening game view.');
+                        currentGame = payload.new; // Ensure currentGame is the latest
+                        openGameView(); // This will re-render everything for the game view
+                    } else {
+                        console.log('Realtime: Not current game or no game viewed. Only updating lists.');
+                    }
+                    
+                    // Check if celebration needs to be triggered on this client
+                    if (payload.eventType === 'UPDATE' && payload.new && payload.new.celebration_triggered_at) {
+                        // Trigger celebration if the modal is not already active for this game
+                        if (!gameEndModal.classList.contains('active')) {
+                            showGameEndCelebrationModal(payload.new);
+                        }
+                    }
+
+                    // Always re-render active and all games lists to reflect changes
+                    renderActiveGames();
+                    renderAllGames();
+                    renderStats(); // Re-render stats as well
+                    console.log('--- End Realtime Games Change ---');
                 })
                 .subscribe();
 
@@ -1005,6 +1129,32 @@
                     loadDataFromSupabase();
                 })
                 .subscribe();
+
+            // Constitution articles subscription
+            const constitutionChannel = supabase
+                .channel('constitution-changes')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'constitution_articles' 
+                }, (payload) => {
+                    console.log('Constitution change:', payload);
+                    loadDataFromSupabase();
+                })
+                .subscribe();
+
+            // Article suggestions subscription
+            const suggestionsChannel = supabase
+                .channel('suggestions-changes')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'article_suggestions' 
+                }, (payload) => {
+                    console.log('Suggestion change:', payload);
+                    loadDataFromSupabase();
+                })
+                .subscribe();
         }
 
         // Tab switching
@@ -1014,7 +1164,6 @@
                 gameView.classList.remove('active');
             }
             
-            // Update tab buttons
             tabButtons.forEach(btn => {
                 if (btn.dataset.tab === tabId) {
                     btn.classList.add('text-black', 'border-b-2', 'border-black');
@@ -1025,7 +1174,6 @@
                 }
             });
             
-            // Update tab contents
             tabContents.forEach(content => {
                 if (content.id === tabId) {
                     content.classList.add('active');
@@ -1039,6 +1187,9 @@
                 renderPlayers();
             } else if (tabId === 'game-types') {
                 renderGameTypes();
+            } else if (tabId === 'constitution') {
+                renderConstitutionArticles();
+                renderPendingArticles();
             } else if (tabId === 'stats') {
                 renderStats();
             } else if (tabId === 'home') {
@@ -1309,4 +1460,1689 @@
             
             confirmBtn.onclick = async () => {
                 try {
-                    await update
+                    await updateInSupabase('players', playerId, { is_active: false });
+                    closeConfirmModal();
+                    
+                    // Add to history
+                    await addToHistory(`Oyuncu gizlendi: ${player.name}`, 'update');
+                } catch (error) {
+                    // Error already handled in updateInSupabase
+                }
+            };
+        }
+
+        async function unhidePlayer(playerId) {
+            const player = appData.players.find(p => p.id === playerId);
+            
+            try {
+                await updateInSupabase('players', playerId, { is_active: true });
+                
+                // Add to history
+                await addToHistory(`Oyuncu tekrar aktif edildi: ${player.name}`, 'update');
+            } catch (error) {
+                // Error already handled in updateInSupabase
+            }
+        }
+
+        async function deletePlayer(playerId) {
+            const player = appData.players.find(p => p.id === playerId);
+            
+            // Check if player has been in any game
+            const playerInGame = appData.games.some(game => 
+                game.players.some(p => p.id === playerId)
+            );
+            
+            if (playerInGame) {
+                alert('Bu oyuncu daha önce bir oyunda yer aldığı için silinemez. Gizleyebilirsiniz.');
+                return;
+            }
+            
+            confirmMessage.textContent = `"${player.name}" oyuncusunu silmek istediğinize emin misiniz?`;
+            confirmModal.classList.add('active');
+            
+            confirmBtn.onclick = async () => {
+                try {
+                    await deleteFromSupabase('players', playerId);
+                    closeConfirmModal();
+                    
+                    // Add to history
+                    await addToHistory(`Oyuncu silindi: ${player.name}`, 'delete');
+                } catch (error) {
+                    // Error already handled in deleteFromSupabase
+                }
+            };
+        }
+
+        // Game type management
+        function renderGameTypes() {
+            const gameTypesTable = document.getElementById('gameTypesTable');
+            gameTypesTable.innerHTML = '';
+            
+            if (appData.gameTypes.length === 0) {
+                gameTypesTable.innerHTML = `
+                    <tr>
+                        <td colspan="2" class="px-6 py-4 text-center text-gray-500">
+                            Henüz oyun türü eklenmemiş.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            appData.gameTypes.forEach(gameType => {
+                const row = document.createElement('tr');
+                row.className = 'player-row';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-gamepad text-gray-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${gameType.name}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="deleteGameType('${gameType.id}')" class="text-gray-600 hover:text-gray-900 focus:outline-none">
+                            <i class="fas fa-trash"></i> Sil
+                        </button>
+                    </td>
+                `;
+                gameTypesTable.appendChild(row);
+            });
+            
+            // Update game type dropdown
+            const gameTypeDropdown = document.getElementById('gameType');
+            gameTypeDropdown.innerHTML = '<option value="">Oyun Türü Seçin</option>';
+            
+            appData.gameTypes.forEach(gameType => {
+                const option = document.createElement('option');
+                option.value = gameType.key;
+                option.textContent = gameType.name;
+                gameTypeDropdown.appendChild(option);
+            });
+        }
+
+        async function addGameType() {
+            const newGameType = document.getElementById('newGameType').value.trim();
+            
+            if (!newGameType) {
+                alert('Lütfen oyun türü adı girin.');
+                return;
+            }
+            
+            const newGameTypeObj = {
+                name: newGameType,
+                key: newGameType.toLowerCase().replace(/\s+/g, '-')
+            };
+            
+            try {
+                await addToSupabase('game_types', newGameTypeObj);
+                document.getElementById('newGameType').value = '';
+                
+                // Add to history
+                await addToHistory(`Yeni oyun türü eklendi: ${newGameType}`, 'add');
+            } catch (error) {
+                // Error already handled in addToSupabase
+            }
+        }
+
+        
+
+        async function deleteGameType(gameTypeId) {
+            const gameType = appData.gameTypes.find(gt => gt.id === gameTypeId);
+            
+            confirmMessage.textContent = `"${gameType.name}" oyun türünü silmek istediğinize emin misiniz?`;
+            confirmModal.classList.add('active');
+            
+            confirmBtn.onclick = async () => {
+                try {
+                    await deleteFromSupabase('game_types', gameTypeId);
+                    closeConfirmModal();
+                    
+                    // Add to history
+                    await addToHistory(`Oyun türü silindi: ${gameType.name}`, 'delete');
+                } catch (error) {
+                    // Error already handled in deleteFromSupabase
+                }
+            };
+        }
+
+        // Game management
+        async function startGame() {
+            const gameTypeKey = document.getElementById('gameType').value;
+            const gameFormat = document.getElementById('gameFormat').value;
+            
+            if (!gameTypeKey) {
+                alert('Lütfen oyun türü seçin.');
+                return;
+            }
+            
+            if (selectedPlayers.length === 0) {
+                alert('Lütfen en az bir oyuncu seçin.');
+                return;
+            }
+            
+            if (gameFormat === 'team' && (team1Players.length === 0 || team2Players.length === 0)) {
+                alert('Lütfen her iki takıma da en az bir oyuncu atayın.');
+                return;
+            }
+            
+            const gameType = appData.gameTypes.find(gt => gt.key === gameTypeKey);
+            
+            // Create new game
+            const newGame = {
+                type: gameType,
+                format: gameFormat,
+                players: gameFormat === 'team' ? [...team1Players, ...team2Players] : [...selectedPlayers],
+                teams: gameFormat === 'team' ? {
+                    team1: [...team1Players],
+                    team2: [...team2Players]
+                } : null,
+                rounds: [],
+                history: [],
+                is_active: true,
+                created_at: new Date().toISOString()
+            };
+            
+            try {
+                const createdGame = await addToSupabase('games', newGame);
+                
+                // Update local appData.games
+                appData.games.unshift(createdGame);
+                
+                // Re-render the relevant sections
+                renderActiveGames();
+                renderAllGames();
+                
+                // Set current game and open game view
+                currentGame = createdGame;
+                openGameView();
+                
+                // Reset selections
+                selectedPlayers = [];
+                team1Players = [];
+                team2Players = [];
+                document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
+                
+                // Add to history
+                await addToHistory(`Yeni oyun başlatıldı: ${gameType.name}`, 'add');
+            } catch (error) {
+                // Error already handled in addToSupabase
+            }
+        }
+
+        function renderActiveGames() {
+            const activeGamesDiv = document.getElementById('activeGames');
+            const activeGames = appData.games.filter(game => game.is_active);
+            
+            if (activeGames.length === 0) {
+                activeGamesDiv.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-gamepad text-4xl mb-3"></i>
+                        <p>Aktif oyun bulunmamaktadır.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            activeGamesDiv.innerHTML = '';
+            
+            activeGames.forEach(game => {
+                const gameCard = document.createElement('div');
+                gameCard.className = 'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-300';
+                
+                let playersText = '';
+                if (game.format === 'team') {
+                    playersText = `
+                        <div class="flex justify-between mb-2">
+                            <div class="text-black font-medium">Takım 1: ${game.teams.team1.map(p => p.name).join(', ')}</div>
+                            <div class="text-gray-600 font-medium">Takım 2: ${game.teams.team2.map(p => p.name).join(', ')}</div>
+                        </div>
+                    `;
+                } else {
+                    playersText = `<div class="text-gray-600 mb-2">Oyuncular: ${game.players.map(p => p.name).join(', ')}</div>`;
+                }
+                
+                gameCard.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                        <div>
+                            <h3 class="text-lg font-semibold text-black">${game.type.name}</h3>
+                            ${playersText}
+                            <div class="text-sm text-gray-500">Başlangıç: ${new Date(game.created_at).toLocaleString('tr-TR')}</div>
+                        </div>
+                        <button onclick="resumeGame('${game.id}')" class="mt-3 sm:mt-0 btn-primary px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <i class="fas fa-play mr-2"></i>Devam Et
+                        </button>
+                    </div>
+                `;
+                
+                activeGamesDiv.appendChild(gameCard);
+            });
+        }
+
+        function renderAllGames() {
+            const allGamesDiv = document.getElementById('allGames');
+            let games = appData.games;
+            
+            // Apply filter
+            if (gameFilter === 'active') {
+                games = games.filter(game => game.is_active);
+            } else if (gameFilter === 'finished') {
+                games = games.filter(game => !game.is_active);
+            }
+            
+            if (games.length === 0) {
+                allGamesDiv.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-gamepad text-4xl mb-3"></i>
+                        <p>${gameFilter === 'active' ? 'Aktif' : gameFilter === 'finished' ? 'Bitmiş' : 'Henüz'} oyun bulunmamaktadır.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            allGamesDiv.innerHTML = '';
+            
+            // Sort games by creation date (newest first)
+            games.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            games.forEach(game => {
+                const gameCard = document.createElement('div');
+                gameCard.className = 'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-300';
+                
+                let playersText = '';
+                if (game.format === 'team') {
+                    playersText = `
+                        <div class="flex justify-between mb-2">
+                            <div class="text-black font-medium">Takım 1: ${game.teams.team1.map(p => p.name).join(', ')}</div>
+                            <div class="text-gray-600 font-medium">Takım 2: ${game.teams.team2.map(p => p.name).join(', ')}</div>
+                        </div>
+                    `;
+                } else {
+                    playersText = `<div class="text-gray-600 mb-2">Oyuncular: ${game.players.map(p => p.name).join(', ')}</div>`;
+                }
+                
+                let statusBadge = '';
+                let actionButton = '';
+                
+                if (game.is_active) {
+                    statusBadge = '<span class="px-2 py-1 bg-gray-200 text-gray-800 text-xs font-medium rounded-full">Aktif</span>';
+                    actionButton = `
+                        <button onclick="resumeGame('${game.id}')" class="btn-primary px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <i class="fas fa-play mr-2"></i>Devam Et
+                        </button>
+                    `;
+                } else {
+                    statusBadge = '<span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">Bitmiş</span>';
+                    actionButton = `
+                        <button onclick="viewGameDetails('${game.id}')" class="btn-secondary px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <i class="fas fa-eye mr-2"></i>Detayları Gör
+                        </button>
+                    `;
+                    if (currentUser && currentUser.username === 'ibo') {
+                        actionButton += `
+                            <button onclick="confirmDeleteGame('${game.id}')" class="btn-danger px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 ml-2">
+                                <i class="fas fa-trash mr-2"></i>Sil
+                            </button>
+                        `;
+                    }
+                }
+                
+                gameCard.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                        <div>
+                            <div class="flex items-center mb-2">
+                                <h3 class="text-lg font-semibold text-black mr-2">${game.type.name}</h3>
+                                ${statusBadge}
+                            </div>
+                            ${playersText}
+                            <div class="text-sm text-gray-500">Başlangıç: ${new Date(game.created_at).toLocaleString('tr-TR')}</div>
+                            ${game.ended_at ? `<div class="text-sm text-gray-500">Bitiş: ${new Date(game.ended_at).toLocaleString('tr-TR')}</div>` : ''}
+                            ${game.winners ? `<div class="text-sm text-gray-700 mt-1">Kazanan: ${game.winners.map(w => w.name).join(', ')}</div>` : ''}
+                        </div>
+                        ${actionButton}
+                    </div>
+                `;
+                
+                allGamesDiv.appendChild(gameCard);
+            });
+        }
+
+        function filterGames(filter) {
+            gameFilter = filter;
+            
+            // Update button styles
+            document.getElementById('filterAllBtn').className = filter === 'all' 
+                ? 'px-4 py-2 btn-primary rounded-lg font-medium transition duration-300'
+                : 'px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300';
+            
+            document.getElementById('filterActiveBtn').className = filter === 'active' 
+                ? 'px-4 py-2 btn-primary rounded-lg font-medium transition duration-300'
+                : 'px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300';
+            
+            document.getElementById('filterFinishedBtn').className = filter === 'finished' 
+                ? 'px-4 py-2 btn-primary rounded-lg font-medium transition duration-300'
+                : 'px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300';
+            
+            renderAllGames();
+        }
+
+        function confirmDeleteGame(gameId) {
+            const game = appData.games.find(g => g.id === gameId);
+            confirmMessage.textContent = `"${game.type.name}" oyununu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`;
+            confirmModal.classList.add('active');
+            
+            confirmBtn.onclick = async () => {
+                await deleteGame(gameId);
+                closeConfirmModal();
+            };
+        }
+
+        async function deleteGame(gameId) {
+            const gameToDelete = appData.games.find(g => g.id === gameId);
+            if (!gameToDelete) return;
+            
+            try {
+                if (!currentUser || currentUser.username !== 'ibo') {
+                    alert('Bu işlemi yapmaya yetkiniz yok.');
+                    return;
+                }
+
+                await deleteFromSupabase('games', gameId);
+                
+                appData.games = appData.games.filter(g => g.id !== gameId);
+
+                renderAllGames();
+                renderStats();
+                
+                await addToHistory(`${gameToDelete.type.name} oyunu silindi.`, 'delete');
+
+            } catch (error) {
+                console.error('Error deleting game:', error);
+                alert('Oyun silinirken bir hata oluştu: ' + error.message);
+            }
+        }
+
+        function resumeGame(gameId) {
+            currentGame = appData.games.find(game => game.id === gameId);
+            openGameView();
+        }
+
+        function viewGameDetails(gameId) {
+            currentGame = appData.games.find(game => game.id === gameId);
+            openGameView();
+        }
+
+        function openGameView() {
+            if (!currentGame) return;
+            
+            // Hide all tabs
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active state from all tab buttons
+            tabButtons.forEach(btn => {
+                btn.classList.remove('text-black', 'border-b-2', 'border-black');
+                btn.classList.add('text-gray-500');
+            });
+            
+            // Show game view
+            gameView.classList.add('active');
+            
+            // Set game title
+            document.getElementById('gameTitle').textContent = currentGame.type.name;
+            
+            // Render score table
+            renderScoreTable();
+            
+            // Render game history
+            renderGameHistory();
+            
+            // Disable controls if game is finished
+            if (!currentGame.is_active) {
+                document.getElementById('addRoundBtn').disabled = true;
+                document.getElementById('endGameBtn').disabled = true;
+                document.getElementById('addRoundBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('endGameBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                document.getElementById('addRoundBtn').disabled = false;
+                document.getElementById('endGameBtn').disabled = false;
+                document.getElementById('addRoundBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                document.getElementById('endGameBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function backToHome() {
+            // Hide game view
+            gameView.classList.remove('active');
+            
+            // Show home tab
+            switchTab('home');
+        }
+
+        function renderScoreTable() {
+            if (!currentGame) return;
+            
+            const scoreTable = document.getElementById('scoreTable');
+            const scoreTableBody = document.getElementById('scoreTableBody');
+            const scoreTableFooter = scoreTable.querySelector('tfoot tr');
+            
+            // Clear existing content
+            scoreTableBody.innerHTML = '';
+            scoreTableFooter.innerHTML = '<td class="px-4 py-3 font-medium">Toplam</td>';
+            
+            // Add player headers
+            const headerRow = scoreTable.querySelector('thead tr');
+            headerRow.innerHTML = '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">El</th>';
+            
+            if (currentGame.format === 'team') {
+                // Add team headers with player names
+                headerRow.innerHTML += `
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                        Takım 1<br>
+                        <span class="text-xs font-normal text-gray-500">${currentGame.teams.team1.map(p => p.name).join(', ')}</span>
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                        Takım 2<br>
+                        <span class="text-xs font-normal text-gray-500">${currentGame.teams.team2.map(p => p.name).join(', ')}</span>
+                    </th>
+                `;
+                
+                // Add footer cells for teams
+                scoreTableFooter.innerHTML += `
+                    <td class="px-4 py-3 font-medium" id="total-team1">0</td>
+                    <td class="px-4 py-3 font-medium" id="total-team2">0</td>
+                `;
+            } else {
+                currentGame.players.forEach(player => {
+                    headerRow.innerHTML += `
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${player.name}</th>
+                    `;
+                    
+                    // Add footer cells for players
+                    scoreTableFooter.innerHTML += `
+                        <td class="px-4 py-3 font-medium" id="total-${player.id}">0</td>
+                    `;
+                });
+            }
+            
+            // Add action column
+            headerRow.innerHTML += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlem</th>';
+            scoreTableFooter.innerHTML += '<td></td>';
+            
+            // Add rounds
+            currentGame.rounds.forEach((round, index) => {
+                addRoundToTable(round, index);
+            });
+            
+            // Calculate totals
+            calculateTotals();
+        }
+
+        async function addRound() {
+            if (!currentGame) return;
+            
+            const roundNumber = currentGame.rounds.length + 1;
+            const newRound = {
+                number: roundNumber,
+                scores: {}
+            };
+            
+            // Initialize scores with null (will be displayed as empty)
+            if (currentGame.format === 'team') {
+                newRound.scores.team1 = null;
+                newRound.scores.team2 = null;
+            } else {
+                currentGame.players.forEach(player => {
+                    newRound.scores[player.id] = null;
+                });
+            }
+            
+            try {
+                // Add round to the game
+                const updatedRounds = [...currentGame.rounds, newRound];
+                await updateInSupabase('games', currentGame.id, { rounds: updatedRounds });
+                
+                currentGame.rounds = updatedRounds; // Update local state
+                renderScoreTable(); // Re-render the table to show the new round
+                
+                // Add to game history
+                const historyItem = {
+                    action: 'add',
+                    description: `${roundNumber}. el eklendi.`,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const updatedHistory = [...currentGame.history, historyItem];
+                await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                
+                // Add to app history
+                await addToHistory(`${currentGame.type.name} oyununda ${roundNumber}. el eklendi.`, 'add');
+            } catch (error) {
+                // Error already handled in updateInSupabase
+            }
+        }
+
+        function addRoundToTable(round, index) {
+            const scoreTableBody = document.getElementById('scoreTableBody');
+            const row = document.createElement('tr');
+            row.id = `round-${index}`;
+            row.className = 'hover:bg-gray-50';
+            
+            // Round number
+            row.innerHTML = `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${round.number}</td>`;
+            
+            // Scores
+            if (currentGame.format === 'team') {
+                const team1Value = round.scores.team1 === null ? '' : round.scores.team1;
+                const team2Value = round.scores.team2 === null ? '' : round.scores.team2;
+                
+                row.innerHTML += `
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="number" class="score-input w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500" 
+                               data-round-index="${index}" data-team="team1" value="${team1Value}" ${!currentGame.is_active ? 'disabled' : ''}>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <input type="number" class="score-input w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500" 
+                               data-round-index="${index}" data-team="team2" value="${team2Value}" ${!currentGame.is_active ? 'disabled' : ''}>
+                    </td>
+                `;
+            } else {
+                currentGame.players.forEach(player => {
+                    const playerValue = round.scores[player.id] === null ? '' : round.scores[player.id];
+                    
+                    row.innerHTML += `
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <input type="number" class="score-input w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500" 
+                                   data-round-index="${index}" data-player-id="${player.id}" value="${playerValue}" ${!currentGame.is_active ? 'disabled' : ''}>
+                        </td>
+                    `;
+                });
+            }
+            
+            // Actions
+            const deleteDisabled = !currentGame.is_active ? 'disabled' : '';
+            const deleteClass = !currentGame.is_active ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 hover:text-gray-900';
+            
+            row.innerHTML += `
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    <button onclick="deleteRound(${index})" class="${deleteClass} focus:outline-none" ${deleteDisabled}>
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            scoreTableBody.appendChild(row);
+            
+            // Add event listeners to score inputs only if game is active
+            if (currentGame.is_active) {
+                const scoreInputs = row.querySelectorAll('.score-input');
+                scoreInputs.forEach(input => {
+                    input.addEventListener('change', updateScore);
+                });
+            }
+            
+            // Highlight lowest score
+            highlightLowestScore();
+        }
+
+        async function updateScore(event) {
+            const input = event.target;
+            const roundIndex = parseInt(input.dataset.roundIndex);
+            const round = currentGame.rounds[roundIndex];
+            
+            // Get current value
+            let currentValue;
+            let playerOrTeam;
+            
+            if (currentGame.format === 'team') {
+                const team = input.dataset.team;
+                // Convert empty string to 0, otherwise parse as number
+                currentValue = input.value === '' ? 0 : parseInt(input.value) || 0;
+                round.scores[team] = currentValue;
+                playerOrTeam = team === 'team1' ? 'Takım 1' : 'Takım 2';
+            } else {
+                const playerId = input.dataset.playerId;
+                // Convert empty string to 0, otherwise parse as number
+                currentValue = input.value === '' ? 0 : parseInt(input.value) || 0;
+                round.scores[playerId] = currentValue;
+                const player = currentGame.players.find(p => p.id === playerId);
+                playerOrTeam = player.name;
+            }
+            
+            try {
+                // Update rounds in Supabase
+                await updateInSupabase('games', currentGame.id, { rounds: currentGame.rounds });
+                
+                // Update totals
+                calculateTotals();
+                
+                // Highlight lowest score
+                highlightLowestScore();
+                
+                // Add to game history
+                const historyItem = {
+                    action: 'update',
+                    description: `${currentGame.type.name} oyununda ${round.number}. el ${playerOrTeam}'nin puanı ${currentValue} olarak girildi.`,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const updatedHistory = [...currentGame.history, historyItem];
+                await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                
+                // Add to app history
+                await addToHistory(`${currentGame.type.name} oyununda ${round.number}. el ${playerOrTeam}'nin puanı güncellendi.`, 'update');
+            } catch (error) {
+                // Error already handled in updateInSupabase
+            }
+        }
+
+        async function deleteRound(roundIndex) {
+            const round = currentGame.rounds[roundIndex];
+            
+            confirmMessage.textContent = `${round.number}. eli silmek istediğinize emin misiniz?`;
+            confirmModal.classList.add('active');
+            
+            confirmBtn.onclick = async () => {
+                try {
+                    // Remove round
+                    const updatedRounds = currentGame.rounds.filter((_, index) => index !== roundIndex);
+                    await updateInSupabase('games', currentGame.id, { rounds: updatedRounds });
+                    
+                    // Re-render table
+                    renderScoreTable();
+                    
+                    // Add to game history
+                    const historyItem = {
+                        action: 'delete',
+                        description: `${currentGame.type.name} oyununda ${round.number}. el silindi.`,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    const updatedHistory = [...currentGame.history, historyItem];
+                    await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                    
+                    // Add to app history
+                    await addToHistory(`${currentGame.type.name} oyununda ${round.number}. el silindi.`, 'delete');
+                    
+                    closeConfirmModal();
+                } catch (error) {
+                    // Error already handled in updateInSupabase
+                }
+            };
+        }
+
+        function calculateTotals() {
+            if (!currentGame) return;
+            
+            if (currentGame.format === 'team') {
+                let team1Total = 0;
+                let team2Total = 0;
+                
+                currentGame.rounds.forEach(round => {
+                    team1Total += round.scores.team1 || 0;
+                    team2Total += round.scores.team2 || 0;
+                });
+                
+                document.getElementById('total-team1').textContent = team1Total;
+                document.getElementById('total-team2').textContent = team2Total;
+                
+                // Clear all highlights first
+                const team1Cell = document.getElementById('total-team1').parentElement;
+                const team2Cell = document.getElementById('total-team2').parentElement;
+                
+                team1Cell.classList.remove('lowest-score');
+                team2Cell.classList.remove('lowest-score');
+                
+                // Highlight only the lowest total
+                if (team1Total < team2Total) {
+                    team1Cell.classList.add('lowest-score');
+                } else if (team2Total < team1Total) {
+                    team2Cell.classList.add('lowest-score');
+                }
+                // If equal, no highlight
+            } else {
+                const totals = {};
+                
+                // Initialize totals
+                currentGame.players.forEach(player => {
+                    totals[player.id] = 0;
+                });
+                
+                // Calculate totals
+                currentGame.rounds.forEach(round => {
+                    currentGame.players.forEach(player => {
+                        totals[player.id] += round.scores[player.id] || 0;
+                    });
+                });
+                
+                // Update UI
+                currentGame.players.forEach(player => {
+                    const totalCell = document.getElementById(`total-${player.id}`);
+                    if (totalCell) {
+                        totalCell.textContent = totals[player.id];
+                    }
+                });
+                
+                // Find lowest score
+                let lowestScore = Infinity;
+                let lowestPlayerId = null;
+                
+                currentGame.players.forEach(player => {
+                    if (totals[player.id] < lowestScore) {
+                        lowestScore = totals[player.id];
+                        lowestPlayerId = player.id;
+                    }
+                });
+                
+                // Clear all highlights first
+                currentGame.players.forEach(player => {
+                    const totalCell = document.getElementById(`total-${player.id}`);
+                    if (totalCell) {
+                        totalCell.parentElement.classList.remove('lowest-score');
+                    }
+                });
+                
+                // Highlight only the lowest total
+                if (lowestPlayerId !== null) {
+                    const lowestCell = document.getElementById(`total-${lowestPlayerId}`);
+                    if (lowestCell) {
+                        lowestCell.parentElement.classList.add('lowest-score');
+                    }
+                }
+            }
+        }
+
+        function highlightLowestScore() {
+            if (!currentGame || currentGame.rounds.length === 0) return;
+            
+            // For each round, find the lowest score
+            currentGame.rounds.forEach((round, index) => {
+                const row = document.getElementById(`round-${index}`);
+                if (!row) return;
+                
+                // Remove existing highlights
+                const cells = row.querySelectorAll('td');
+                cells.forEach(cell => {
+                    cell.classList.remove('lowest-score');
+                });
+                
+                // Find lowest score
+                let lowestScore = Infinity;
+                let lowestCellIndex = -1;
+                
+                if (currentGame.format === 'team') {
+                    const team1Score = round.scores.team1 || 0;
+                    const team2Score = round.scores.team2 || 0;
+                    
+                    if (team1Score < lowestScore) {
+                        lowestScore = team1Score;
+                        lowestCellIndex = 1; // Team 1 is at index 1
+                    }
+                    if (team2Score < lowestScore) {
+                        lowestScore = team2Score;
+                        lowestCellIndex = 2; // Team 2 is at index 2
+                    }
+                } else {
+                    currentGame.players.forEach((player, index) => {
+                        const playerScore = round.scores[player.id] || 0;
+                        if (playerScore < lowestScore) {
+                            lowestScore = playerScore;
+                            lowestCellIndex = index + 1; // +1 because first column is round number
+                        }
+                    });
+                }
+                
+                // Highlight lowest score
+                if (lowestCellIndex >= 0) {
+                    cells[lowestCellIndex].classList.add('lowest-score');
+                }
+            });
+        }
+
+        
+
+        
+
+        
+
+        function showGameEndCelebrationModal(game) {
+            gameEndWinnersDiv.textContent = game.winners.map(w => w.name).join(', ');
+            gameEndModal.classList.add('active'); // Show the modal
+
+            // Trigger confetti
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        async function endGame() {
+            if (!currentGame) return;
+            
+            confirmMessage.textContent = 'Oyunu bitirmek istediğinize emin misiniz?';
+            confirmModal.classList.add('active');
+            
+            confirmBtn.onclick = async () => {
+                try {
+                    // Determine winner(s)
+                    let winners = [];
+                    
+                    if (currentGame.format === 'team') {
+                        let team1Total = 0;
+                        let team2Total = 0;
+                        
+                        currentGame.rounds.forEach(round => {
+                            team1Total += round.scores.team1 || 0;
+                            team2Total += round.scores.team2 || 0;
+                        });
+                        
+                        if (team1Total < team2Total) {
+                            winners = [...currentGame.teams.team1];
+                        } else if (team2Total < team1Total) {
+                            winners = [...currentGame.teams.team2];
+                        } else {
+                            // Tie
+                            winners = [...currentGame.teams.team1, ...currentGame.teams.team2];
+                        }
+                    } else {
+                        const totals = {};
+                        
+                        // Initialize totals
+                        currentGame.players.forEach(player => {
+                            totals[player.id] = 0;
+                        });
+                        
+                        // Calculate totals
+                        currentGame.rounds.forEach(round => {
+                            currentGame.players.forEach(player => {
+                                totals[player.id] += round.scores[player.id] || 0;
+                            });
+                        });
+                        
+                        // Find lowest score
+                        let lowestScore = Infinity;
+                        
+                        currentGame.players.forEach(player => {
+                            if (totals[player.id] < lowestScore) {
+                                lowestScore = totals[player.id];
+                                winners = [player];
+                            } else if (totals[player.id] === lowestScore) {
+                                winners.push(player);
+                            }
+                        });
+                    }
+                    
+                    // Update game status
+                    const updates = {
+                        is_active: false,
+                        ended_at: new Date().toISOString(),
+                        winners: winners,
+                        celebration_triggered_at: new Date().toISOString() // New field to trigger celebration on other clients
+                    };
+                    
+                    await updateInSupabase('games', currentGame.id, updates);
+                    
+                    // Update local state
+                    currentGame.is_active = false;
+                    currentGame.ended_at = new Date().toISOString();
+                    currentGame.winners = winners;
+                    
+                    // Re-render relevant sections
+                    renderActiveGames();
+                    renderAllGames();
+                    
+                    // Stats will be recalculated dynamically based on finished games
+                    
+                    // Add to game history
+                    const historyItem = {
+                        action: 'end',
+                        description: `Oyun bitti. Kazananlar: ${winners.map(w => w.name).join(', ')}`,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    const updatedHistory = [...currentGame.history, historyItem];
+                    await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                    
+                    // Add to app history
+                    await addToHistory(`${currentGame.type.name} oyunu bitti. Kazananlar: ${winners.map(w => w.name).join(', ')}`, 'add');
+                    
+                    // Close game view and refresh
+                    backToHome();
+                    renderActiveGames();
+                    renderAllGames();
+                    renderStats();
+                    
+                    // Trigger celebration on the client that ended the game
+                    showGameEndCelebrationModal(currentGame);
+
+                    closeConfirmModal();
+                } catch (error) {
+                    // Error already handled in updateInSupabase
+                }
+            };
+        }
+
+        function toggleGameHistory() {
+            const gameHistory = document.getElementById('gameHistory');
+            gameHistory.classList.toggle('expanded');
+        }
+
+        function renderGameHistory() {
+            if (!currentGame) return;
+            
+            const gameHistoryDiv = document.getElementById('gameHistory');
+            gameHistoryDiv.innerHTML = '';
+            
+            if (currentGame.history.length === 0) {
+                gameHistoryDiv.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        <p>Oyun geçmişi bulunmamaktadır.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort history by timestamp (newest first)
+            const sortedHistory = [...currentGame.history].sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            
+            sortedHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = `p-3 rounded-lg text-sm mb-2 ${getHistoryClass(item.action)}`;
+                
+                const time = new Date(item.timestamp).toLocaleTimeString('tr-TR');
+                historyItem.innerHTML = `
+                    <div class="flex justify-between">
+                        <span>${item.description}</span>
+                        <span class="text-gray-500">${time}</span>
+                    </div>
+                `;
+                
+                gameHistoryDiv.appendChild(historyItem);
+            });
+        }
+
+        function getHistoryClass(action) {
+            switch (action) {
+                case 'add':
+                    return 'history-item-add';
+                case 'update':
+                    return 'history-item-update';
+                case 'delete':
+                    return 'history-item-delete';
+                case 'end':
+                    return 'history-item-add';
+                default:
+                    return '';
+            }
+        }
+
+        // Stats
+        function renderStats() {
+            const winnersTable = document.getElementById('winnersTable');
+            winnersTable.innerHTML = '';
+            
+            const activePlayers = appData.players.filter(player => player.is_active);
+            
+            if (activePlayers.length === 0) {
+                winnersTable.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                            Henüz istatistik bulunmamaktadır.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Calculate stats dynamically from finished games
+            const calculatedStats = {};
+
+            // Initialize calculatedStats with all active players, setting their win counts to 0
+            activePlayers.forEach(player => {
+                calculatedStats[player.id] = {
+                    id: player.id,
+                    name: player.name,
+                    // Initialize all game types to 0
+                    ...Object.fromEntries(appData.gameTypes.map(gt => [gt.key, 0])),
+                    total: 0
+                };
+            });
+            
+            appData.games.forEach(game => {
+                if (!game.is_active && game.winners && game.winners.length > 0) { // Only finished games with winners
+                    game.winners.forEach(winner => {
+                        // Ensure the player exists in calculatedStats (they should if they are active)
+                        if (calculatedStats[winner.id]) {
+                            // Ensure game.type exists and has a key
+                            if (game.type && game.type.key) {
+                                calculatedStats[winner.id][game.type.key]++;
+                                calculatedStats[winner.id].total++;
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Convert calculatedStats object to an array for sorting and rendering
+            const statsData = Object.values(calculatedStats);
+            
+            // Sort by total wins (descending)
+            statsData.sort((a, b) => b.total - a.total);
+            
+            // Render table
+            statsData.forEach(playerStats => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <span class="text-black font-medium">${playerStats.name.charAt(0)}</span>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${playerStats.name}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${playerStats['101-okey']}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${playerStats.uno}</td>
+                    <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">${playerStats['düz-okey']}</td>
+                    <td class="px-6 py-3 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-200 text-gray-800">
+                            ${playerStats.total}
+                        </span>
+                    </td>
+                `;
+                
+                winnersTable.appendChild(row);
+            });
+        }
+
+        // Constitution Functions
+        function renderConstitutionArticles() {
+            const articlesDiv = document.getElementById('constitutionArticles');
+            
+            if (appData.constitutionArticles.length === 0) {
+                articlesDiv.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-book text-4xl mb-3"></i>
+                        <p>Henüz onaylı anayasa maddesi bulunmamaktadır.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            articlesDiv.innerHTML = '';
+            
+            appData.constitutionArticles.forEach(article => {
+                const articleDiv = document.createElement('div');
+                articleDiv.className = 'bg-gray-50 border border-gray-200 rounded-lg p-4';
+                
+                // Orijinal öneriyi bul (oy verenler için)
+                const originalSuggestion = appData.articleSuggestions.find(s => s.id === article.original_suggestion_id) || 
+                                        appData.history.find(h => h.description.includes(article.content.substring(0, 30)));
+                
+                // Oy verenlerin listesi (eğer bulunabiliyorsa)
+                let approvalVoters = [];
+                let rejectionVoters = [];
+                if (originalSuggestion && originalSuggestion.votes) {
+                    approvalVoters = originalSuggestion.votes.filter(v => v.vote_type === 'approve').map(v => v.username);
+                    rejectionVoters = originalSuggestion.votes.filter(v => v.vote_type === 'reject').map(v => v.username);
+                }
+                
+                articleDiv.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-3">
+                                <span class="bg-black text-white text-sm font-bold px-3 py-1 rounded-full mr-3">
+                                    Madde ${article.article_number}
+                                </span>
+                                <span class="text-xs text-gray-500">
+                                    ${new Date(article.created_at).toLocaleDateString('tr-TR')}
+                                </span>
+                            </div>
+                            <p class="text-gray-800 leading-relaxed mb-3">${article.content}</p>
+                            <div class="flex items-center justify-between text-sm text-gray-600">
+                                <span><i class="fas fa-user mr-1"></i>Öneren: ${article.suggested_by}</span>
+                                <span><i class="fas fa-calendar-check mr-1"></i>Onaylanma: ${new Date(article.approved_at).toLocaleDateString('tr-TR')}</span>
+                            </div>
+                            ${approvalVoters.length > 0 || rejectionVoters.length > 0 ? `
+                                <div class="mt-3 pt-3 border-t border-gray-200">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                        ${approvalVoters.length > 0 ? `
+                                            <div>
+                                                <span class="font-medium text-green-600">Onaylayanlar:</span>
+                                                <div class="text-green-600">${approvalVoters.join(', ')}</div>
+                                            </div>
+                                        ` : ''}
+                                        ${rejectionVoters.length > 0 ? `
+                                            <div>
+                                                <span class="font-medium text-red-600">Ret Edenler:</span>
+                                                <div class="text-red-600">${rejectionVoters.join(', ')}</div>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                articlesDiv.appendChild(articleDiv);
+            });
+        }
+
+        function renderPendingArticles() {
+            const pendingDiv = document.getElementById('pendingArticles');
+            
+            if (appData.articleSuggestions.length === 0) {
+                pendingDiv.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-clock text-4xl mb-3"></i>
+                        <p>Bekleyen madde önerisi bulunmamaktadır.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            pendingDiv.innerHTML = '';
+            
+            appData.articleSuggestions.forEach(suggestion => {
+                const currentUserVote = suggestion.votes?.find(v => v.user_id === currentUser?.id);
+                const suggestionDiv = document.createElement('div');
+                suggestionDiv.className = 'bg-white border border-gray-200 rounded-lg p-4';
+                
+                // Oy verenlerin listesi
+                const approvalVoters = suggestion.votes?.filter(v => v.vote_type === 'approve').map(v => v.username) || [];
+                const rejectionVoters = suggestion.votes?.filter(v => v.vote_type === 'reject').map(v => v.username) || [];
+                
+                suggestionDiv.innerHTML = `
+                    <div class="mb-4">
+                        <p class="text-gray-800 leading-relaxed mb-2">${suggestion.content}</p>
+                        <div class="text-sm text-gray-600">
+                            <i class="fas fa-user mr-1"></i>Öneren: ${suggestion.suggested_by}
+                            <span class="ml-3">
+                                <i class="fas fa-calendar mr-1"></i>
+                                ${new Date(suggestion.created_at).toLocaleDateString('tr-TR')}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="flex items-center space-x-6">
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-green-600">${suggestion.approval_votes || 0}</div>
+                                <div class="text-xs text-gray-500 mb-1">Onay</div>
+                                ${approvalVoters.length > 0 ? `<div class="text-xs text-green-600">${approvalVoters.join(', ')}</div>` : ''}
+                            </div>
+                            <div class="text-center">
+                                <div class="text-lg font-bold text-red-600">${suggestion.rejection_votes || 0}</div>
+                                <div class="text-xs text-gray-500 mb-1">Ret</div>
+                                ${rejectionVoters.length > 0 ? `<div class="text-xs text-red-600">${rejectionVoters.join(', ')}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex space-x-2">
+                            ${currentUserVote ? `
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-600">Mevcut oyunuz: 
+                                        <span class="font-medium ${currentUserVote.vote_type === 'approve' ? 'text-green-600' : 'text-red-600'}">
+                                            ${currentUserVote.vote_type === 'approve' ? 'Onay' : 'Ret'}
+                                        </span>
+                                    </span>
+                                    <button onclick="changeVote('${suggestion.id}', '${currentUserVote.vote_type === 'approve' ? 'reject' : 'approve'}')" class="px-3 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 transition duration-300">
+                                        <i class="fas fa-exchange-alt mr-1"></i>Değiştir
+                                    </button>
+                                    <button onclick="cancelVote('${suggestion.id}')" class="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600 transition duration-300">
+                                        <i class="fas fa-times mr-1"></i>İptal Et
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="voteOnSuggestion('${suggestion.id}', 'approve')" class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-green-500">
+                                    <i class="fas fa-thumbs-up mr-1"></i>Onayla
+                                </button>
+                                <button onclick="voteOnSuggestion('${suggestion.id}', 'reject')" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                    <i class="fas fa-thumbs-down mr-1"></i>Ret Et
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+                pendingDiv.appendChild(suggestionDiv);
+            });
+        }
+
+        async function addArticleSuggestion() {
+            const content = document.getElementById('newArticleContent').value.trim();
+            
+            if (!content) {
+                showToast('Lütfen madde içeriği girin.', 'error');
+                return;
+            }
+            
+            if (content.length < 10) {
+                showToast('Madde içeriği en az 10 karakter olmalıdır.', 'error');
+                return;
+            }
+            
+            const newSuggestion = {
+                content: content,
+                suggested_by: currentUser.username,
+                status: 'pending',
+                approval_votes: 0,
+                rejection_votes: 0,
+                votes: []
+            };
+            
+            try {
+                const createdSuggestion = await addToSupabase('article_suggestions', newSuggestion);
+                
+                // Update local data
+                appData.articleSuggestions.unshift(createdSuggestion);
+                
+                // Re-render
+                renderPendingArticles();
+                
+                // Clear form
+                document.getElementById('newArticleContent').value = '';
+                
+                // Add to history
+                await addToHistory(`Yeni anayasa maddesi önerisi: ${content.substring(0, 50)}...`, 'add');
+                
+                showToast('Madde önerisi başarıyla gönderildi.', 'success');
+            } catch (error) {
+                showToast('Madde önerisi gönderilirken bir hata oluştu.', 'error');
+            }
+        }
+
+        async function voteOnSuggestion(suggestionId, voteType) {
+            if (!currentUser) {
+                showToast('Oy vermek için giriş yapmalısınız.', 'error');
+                return;
+            }
+            
+            const suggestion = appData.articleSuggestions.find(s => s.id === suggestionId);
+            if (!suggestion) return;
+            
+            // Check if user already voted
+            const existingVote = suggestion.votes?.find(v => v.user_id === currentUser.id);
+            if (existingVote) {
+                showToast('Bu madde için zaten oy vermişsiniz.', 'warning');
+                return;
+            }
+            
+            try {
+                // Add vote to suggestion
+                const newVote = {
+                    user_id: currentUser.id,
+                    username: currentUser.username,
+                    vote_type: voteType,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const updatedVotes = [...(suggestion.votes || []), newVote];
+                const updatedApprovalVotes = voteType === 'approve' ? (suggestion.approval_votes || 0) + 1 : (suggestion.approval_votes || 0);
+                const updatedRejectionVotes = voteType === 'reject' ? (suggestion.rejection_votes || 0) + 1 : (suggestion.rejection_votes || 0);
+                
+                // Update suggestion
+                await updateInSupabase('article_suggestions', suggestionId, {
+                    votes: updatedVotes,
+                    approval_votes: updatedApprovalVotes,
+                    rejection_votes: updatedRejectionVotes
+                });
+                
+                // Update local data
+                suggestion.votes = updatedVotes;
+                suggestion.approval_votes = updatedApprovalVotes;
+                suggestion.rejectionVotes = updatedRejectionVotes;
+                
+                // Check if suggestion should be approved or rejected
+                if (updatedApprovalVotes >= 3) {
+                    await approveSuggestion(suggestion);
+                } else if (updatedRejectionVotes >= 4) {
+                    await rejectSuggestion(suggestion);
+                } else {
+                    // Re-render pending articles
+                    renderPendingArticles();
+                }
+                
+                showToast(`Oyunuz ${voteType === 'approve' ? 'onay' : 'ret'} olarak kaydedildi.`, 'success');
+                
+            } catch (error) {
+                showToast('Oy verilirken bir hata oluştu.', 'error');
+            }
+        }
+
+        async function approveSuggestion(suggestion) {
+            try {
+                // Get next article number
+                const nextArticleNumber = appData.constitutionArticles.length + 1;
+                
+                // Create new constitution article
+                const newArticle = {
+                    content: suggestion.content,
+                    suggested_by: suggestion.suggested_by,
+                    article_number: nextArticleNumber,
+                    status: 'approved',
+                    approved_at: new Date().toISOString(),
+                    original_suggestion_id: suggestion.id
+                };
+                
+                // Add to constitution articles
+                const createdArticle = await addToSupabase('constitution_articles', newArticle);
+                
+                // Update suggestion status
+                await updateInSupabase('article_suggestions', suggestion.id, {
+                    status: 'approved',
+                    approved_at: new Date().toISOString()
+                });
+                
+                // Update local data
+                appData.constitutionArticles.push(createdArticle);
+                appData.articleSuggestions = appData.articleSuggestions.filter(s => s.id !== suggestion.id);
+                
+                // Re-render
+                renderConstitutionArticles();
+                renderPendingArticles();
+                
+                // Add to history
+                await addToHistory(`Anayasa maddesi onaylandı: ${suggestion.content.substring(0, 50)}...`, 'add');
+                
+                showToast('Madde anayasaya eklendi!', 'success');
+                
+            } catch (error) {
+                showToast('Madde onaylanırken bir hata oluştu.', 'error');
+            }
+        }
+
+        async function rejectSuggestion(suggestion) {
+            try {
+                // Update suggestion status
+                await updateInSupabase('article_suggestions', suggestion.id, {
+                    status: 'rejected',
+                    rejected_at: new Date().toISOString()
+                });
+                
+                // Remove from local data
+                appData.articleSuggestions = appData.articleSuggestions.filter(s => s.id !== suggestion.id);
+                
+                // Re-render
+                renderPendingArticles();
+                
+                // Add to history
+                await addToHistory(`Anayasa maddesi reddedildi: ${suggestion.content.substring(0, 50)}...`, 'success');
+                
+                showToast('Madde reddedildi.', 'warning');
+                
+            } catch (error) {
+                showToast('Madde reddedilirken bir hata oluştu.', 'error');
+            }
+        }
+
+        async function changeVote(suggestionId, newVoteType) {
+            if (!currentUser) {
+                showToast('Oy değiştirmek için giriş yapmalısınız.', 'error');
+                return;
+            }
+            
+            const suggestion = appData.articleSuggestions.find(s => s.id === suggestionId);
+            if (!suggestion) return;
+            
+            try {
+                // Mevcut oyu bul ve güncelle
+                const existingVoteIndex = suggestion.votes?.findIndex(v => v.user_id === currentUser.id);
+                if (existingVoteIndex === -1) return;
+                
+                const oldVoteType = suggestion.votes[existingVoteIndex].vote_type;
+                
+                // Oy sayılarını güncelle
+                let updatedApprovalVotes = suggestion.approval_votes || 0;
+                let updatedRejectionVotes = suggestion.rejection_votes || 0;
+                
+                if (oldVoteType === 'approve') {
+                    updatedApprovalVotes--;
+                } else if (oldVoteType === 'reject') {
+                    updatedRejectionVotes--;
+                }
+                
+                if (newVoteType === 'approve') {
+                    updatedApprovalVotes++;
+                } else if (newVoteType === 'reject') {
+                    updatedRejectionVotes++;
+                }
+                
+                // Oyu güncelle
+                suggestion.votes[existingVoteIndex].vote_type = newVoteType;
+                suggestion.votes[existingVoteIndex].timestamp = new Date().toISOString();
+                
+                // Supabase'i güncelle
+                await updateInSupabase('article_suggestions', suggestionId, {
+                    votes: suggestion.votes,
+                    approval_votes: updatedApprovalVotes,
+                    rejection_votes: updatedRejectionVotes
+                });
+                
+                // Local data'yı güncelle
+                suggestion.approval_votes = updatedApprovalVotes;
+                suggestion.rejection_votes = updatedRejectionVotes;
+                
+                // Durumu kontrol et
+                if (updatedApprovalVotes >= 3) {
+                    await approveSuggestion(suggestion);
+                } else if (updatedRejectionVotes >= 4) {
+                    await rejectSuggestion(suggestion);
+                } else {
+                    // Re-render
+                    renderPendingArticles();
+                }
+                
+                showToast(`Oyunuz ${newVoteType === 'approve' ? 'onay' : 'ret'} olarak değiştirildi.`, 'success');
+                
+            } catch (error) {
+                showToast('Oy değiştirilirken bir hata oluştu.', 'error');
+            }
+        }
+
+        async function cancelVote(suggestionId) {
+            if (!currentUser) {
+                showToast('Oy iptal etmek için giriş yapmalısınız.', 'error');
+                return;
+            }
+            
+            const suggestion = appData.articleSuggestions.find(s => s.id === suggestionId);
+            if (!suggestion) {
+                showToast('Madde bulunamadı.', 'error');
+                return;
+            }
+            
+            try {
+                // Mevcut oyu bul
+                const existingVoteIndex = suggestion.votes?.findIndex(v => v.user_id === currentUser.id);
+                if (existingVoteIndex === -1) return;
+                
+                const oldVoteType = suggestion.votes[existingVoteIndex].vote_type;
+                
+                // Oy sayılarını güncelle
+                let updatedApprovalVotes = suggestion.approval_votes || 0;
+                let updatedRejectionVotes = suggestion.rejection_votes || 0;
+                
+                if (oldVoteType === 'approve') {
+                    updatedApprovalVotes--;
+                } else if (oldVoteType === 'reject') {
+                    updatedRejectionVotes--;
+                }
+                
+                // Oyu kaldır
+                suggestion.votes.splice(existingVoteIndex, 1);
+                
+                // Supabase'i güncelle
+                await updateInSupabase('article_suggestions', suggestionId, {
+                    votes: suggestion.votes,
+                    approval_votes: updatedApprovalVotes,
+                    rejection_votes: updatedRejectionVotes
+                });
+                
+                // Local data'yı güncelle
+                suggestion.approval_votes = updatedApprovalVotes;
+                suggestion.rejection_votes = updatedRejectionVotes;
+                
+                // Re-render
+                renderPendingArticles();
+                
+                showToast('Oyunuz iptal edildi.', 'success');
+                
+            } catch (error) {
+                showToast('Oy iptal edilirken bir hata oluştu.', 'error');
+            }
+        }
+
+        // History
+        async function addToHistory(description, action) {
+            const historyItem = {
+                action: action,
+                description: description,
+                created_at: new Date().toISOString()
+            };
+            
+            try {
+                await addToSupabase('app_history', historyItem);
+            } catch (error) {
+                // Error already handled in addToSupabase
+            }
+        }
+
+        function closeConfirmModal() {
+            confirmModal.classList.remove('active');
+        }
+
+        function showToast(message, type = 'success', duration = 3000) {
+            toastMessage.textContent = message;
+            toastNotification.classList.remove('bg-green-500', 'bg-red-500', 'bg-yellow-500');
+            
+            if (type === 'success') {
+                toastNotification.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                toastNotification.classList.add('bg-red-500');
+            } else if (type === 'warning') {
+                toastNotification.classList.add('bg-yellow-500');
+            }
+
+            toastNotification.classList.remove('hidden', 'opacity-0');
+            toastNotification.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toastNotification.classList.remove('opacity-100');
+                toastNotification.classList.add('opacity-0');
+                setTimeout(() => {
+                    toastNotification.classList.add('hidden');
+                }, 300); // Match transition duration
+            }, duration);
+        }
+
+        // Constitution Book Functions
+        function openConstitutionBook() {
+            renderConstitutionBook();
+            constitutionBookModal.classList.add('active');
+        }
+
+        function renderConstitutionBook() {
+            const contentDiv = document.getElementById('constitutionBookContent');
+            
+            if (appData.constitutionArticles.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-book text-6xl mb-4"></i>
+                        <h4 class="text-xl font-semibold mb-2">Henüz Anayasa Maddesi Yok</h4>
+                        <p>İlk anayasa maddesi önerisi yapıldığında burada görünecektir.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            contentDiv.innerHTML = '';
+            
+            appData.constitutionArticles.forEach(article => {
+                const articleDiv = document.createElement('div');
+                articleDiv.className = 'bg-gray-50 border border-gray-200 rounded-lg p-6';
+                
+                // Orijinal öneriyi bul (oy verenler için)
+                const originalSuggestion = appData.articleSuggestions.find(s => s.id === article.original_suggestion_id) || 
+                                        appData.history.find(h => h.description.includes(article.content.substring(0, 30)));
+                
+                // Oy verenlerin listesi (eğer bulunabiliyorsa)
+                let approvalVoters = [];
+                let rejectionVoters = [];
+                if (originalSuggestion && originalSuggestion.votes) {
+                    approvalVoters = originalSuggestion.votes.filter(v => v.vote_type === 'approve').map(v => v.username);
+                    rejectionVoters = originalSuggestion.votes.filter(v => v.vote_type === 'reject').map(v => v.username);
+                }
+                
+                articleDiv.innerHTML = `
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <span class="bg-black text-white text-lg font-bold px-4 py-2 rounded-full mr-4">
+                                    Madde ${article.article_number}
+                                </span>
+                                <span class="text-sm text-gray-500">
+                                    ${new Date(article.created_at).toLocaleDateString('tr-TR')}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="prose max-w-none">
+                            <p class="text-lg text-gray-800 leading-relaxed mb-4">${article.content}</p>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-gray-600 mb-3">
+                            <span><i class="fas fa-user mr-1"></i>Öneren: ${article.suggested_by}</span>
+                            <span><i class="fas fa-calendar-check mr-1"></i>Onaylanma: ${new Date(article.approved_at).toLocaleDateString('tr-TR')}</span>
+                        </div>
+                        ${approvalVoters.length > 0 || rejectionVoters.length > 0 ? `
+                            <div class="pt-3 border-t border-gray-200">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    ${approvalVoters.length > 0 ? `
+                                        <div>
+                                            <span class="font-medium text-green-600">✅ Onaylayanlar:</span>
+                                            <div class="text-green-600 mt-1">${approvalVoters.join(', ')}</div>
+                                        </div>
+                                    ` : ''}
+                                    ${rejectionVoters.length > 0 ? `
+                                        <div>
+                                            <span class="font-medium text-red-600">❌ Ret Edenler:</span>
+                                            <div class="text-red-600 mt-1">${rejectionVoters.join(', ')}</div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                contentDiv.appendChild(articleDiv);
+            });
+        }
+
+        // Event listeners
+        loginBtn.addEventListener('click', login);
+        logoutBtn.addEventListener('click', logout);
+        settingsBtn.addEventListener('click', openChangePasswordModal);
+        cancelChangePasswordBtn.addEventListener('click', closeChangePasswordModal);
+        confirmChangePasswordBtn.addEventListener('click', changePassword);
+
+        checkLoggedInUser(); // Check login status on page load
+
+        // Initialize the application
+        checkLoggedInUser();
+        
+        // Check connection periodically
+        setInterval(checkConnection, 30000); // Check every 30 seconds
+    </script>
+</body>
+</html>
