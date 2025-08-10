@@ -6,9 +6,8 @@
     <title>Oyun Puan Takip Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         body {
@@ -440,20 +439,12 @@
         </div>
     </div>
     <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "your-project.firebaseapp.com",
-            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
-            projectId: "your-project",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        // Supabase Configuration
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Data structure for the application
         let appData = {
@@ -481,100 +472,165 @@
         const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
         const connectionStatus = document.getElementById('connection-status');
 
-        // Connection status
-        const connectedRef = database.ref('.info/connected');
-        connectedRef.on('value', (snap) => {
-            if (snap.val() === true) {
+        // Check connection status
+        async function checkConnection() {
+            try {
+                const { data, error } = await supabase.from('players').select('count', { count: 'exact', head: true });
+                if (error) throw error;
                 connectionStatus.innerHTML = '<span class="text-green-600"><i class="fas fa-circle mr-1"></i> Çevrimiçi</span>';
-            } else {
+            } catch (error) {
                 connectionStatus.innerHTML = '<span class="text-red-600"><i class="fas fa-circle mr-1"></i> Çevrimdışı</span>';
+                console.error('Connection error:', error);
             }
-        });
+        }
 
-        // Load data from Firebase
-        function loadDataFromFirebase() {
-            // Load players
-            database.ref('players').on('value', (snapshot) => {
-                const playersData = snapshot.val();
-                appData.players = playersData ? Object.values(playersData) : [];
+        // Load data from Supabase
+        async function loadDataFromSupabase() {
+            try {
+                // Load players
+                const { data: playersData, error: playersError } = await supabase
+                    .from('players')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+                
+                if (playersError) throw playersError;
+                appData.players = playersData || [];
+
+                // Load game types
+                const { data: gameTypesData, error: gameTypesError } = await supabase
+                    .from('game_types')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+                
+                if (gameTypesError) throw gameTypesError;
+                appData.gameTypes = gameTypesData || [];
+
+                // Load games
+                const { data: gamesData, error: gamesError } = await supabase
+                    .from('games')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (gamesError) throw gamesError;
+                appData.games = gamesData || [];
+
+                // Load stats
+                const { data: statsData, error: statsError } = await supabase
+                    .from('stats')
+                    .select('*');
+                
+                if (statsError) throw statsError;
+                
+                // Convert stats to the format we need
+                appData.stats = {};
+                if (statsData) {
+                    statsData.forEach(stat => {
+                        if (!appData.stats[stat.player_id]) {
+                            appData.stats[stat.player_id] = {};
+                        }
+                        appData.stats[stat.player_id][stat.game_type_key] = stat.wins;
+                    });
+                }
+
+                // Load history
+                const { data: historyData, error: historyError } = await supabase
+                    .from('app_history')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (historyError) throw historyError;
+                appData.history = historyData || [];
+
+                // Render all components
                 renderPlayers();
                 renderPlayerSelection();
-            });
-
-            // Load game types
-            database.ref('gameTypes').on('value', (snapshot) => {
-                const gameTypesData = snapshot.val();
-                appData.gameTypes = gameTypesData ? Object.values(gameTypesData) : [
-                    { id: 1, name: "101 Okey", key: "101-okey" },
-                    { id: 2, name: "Uno", key: "uno" },
-                    { id: 3, name: "Düz Okey", key: "düz-okey" }
-                ];
                 renderGameTypes();
-            });
-
-            // Load games
-            database.ref('games').on('value', (snapshot) => {
-                const gamesData = snapshot.val();
-                appData.games = gamesData ? Object.values(gamesData) : [];
                 renderActiveGames();
                 renderAllGames();
-            });
-
-            // Load stats
-            database.ref('stats').on('value', (snapshot) => {
-                const statsData = snapshot.val();
-                appData.stats = statsData || {};
                 renderStats();
-            });
-
-            // Load history
-            database.ref('history').on('value', (snapshot) => {
-                const historyData = snapshot.val();
-                appData.history = historyData ? Object.values(historyData) : [];
-            });
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Veriler yüklenirken bir hata oluştu: ' + error.message);
+            }
         }
 
-        // Save data to Firebase
-        function saveDataToFirebase(path, data) {
-            database.ref(path).set(data)
-                .catch((error) => {
-                    console.error('Error saving data:', error);
-                    alert('Veri kaydedilirken bir hata oluştu: ' + error.message);
-                });
+        // Save data to Supabase
+        async function saveToSupabase(table, data) {
+            try {
+                const { data: result, error } = await supabase
+                    .from(table)
+                    .insert([data])
+                    .select();
+                
+                if (error) throw error;
+                return result[0];
+            } catch (error) {
+                console.error('Error saving to Supabase:', error);
+                alert('Veri kaydedilirken bir hata oluştu: ' + error.message);
+                throw error;
+            }
         }
 
-        // Add new item to Firebase
-        function addToFirebase(path, data) {
-            const newItemRef = database.ref(path).push();
-            data.id = newItemRef.key;
-            newItemRef.set(data)
-                .catch((error) => {
-                    console.error('Error adding item:', error);
-                    alert('Veri eklenirken bir hata oluştu: ' + error.message);
-                });
+        // Update data in Supabase
+        async function updateInSupabase(table, id, data) {
+            try {
+                const { data: result, error } = await supabase
+                    .from(table)
+                    .update(data)
+                    .eq('id', id)
+                    .select();
+                
+                if (error) throw error;
+                return result[0];
+            } catch (error) {
+                console.error('Error updating in Supabase:', error);
+                alert('Veri güncellenirken bir hata oluştu: ' + error.message);
+                throw error;
+            }
         }
 
-        // Update item in Firebase
-        function updateInFirebase(path, data) {
-            database.ref(path).update(data)
-                .catch((error) => {
-                    console.error('Error updating item:', error);
-                    alert('Veri güncellenirken bir hata oluştu: ' + error.message);
-                });
+        // Delete data from Supabase
+        async function deleteFromSupabase(table, id) {
+            try {
+                const { error } = await supabase
+                    .from(table)
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+            } catch (error) {
+                console.error('Error deleting from Supabase:', error);
+                alert('Veri silinirken bir hata oluştu: ' + error.message);
+                throw error;
+            }
         }
 
-        // Delete item from Firebase
-        function deleteFromFirebase(path) {
-            database.ref(path).remove()
-                .catch((error) => {
-                    console.error('Error deleting item:', error);
-                    alert('Veri silinirken bir hata oluştu: ' + error.message);
-                });
+        // Add new item to Supabase
+        async function addToSupabase(table, data) {
+            try {
+                const { data: result, error } = await supabase
+                    .from(table)
+                    .insert([data])
+                    .select();
+                
+                if (error) throw error;
+                return result[0];
+            } catch (error) {
+                console.error('Error adding to Supabase:', error);
+                alert('Veri eklenirken bir hata oluştu: ' + error.message);
+                throw error;
+            }
         }
 
         // Initialize the application
-        function init() {
-            loadDataFromFirebase();
+        async function init() {
+            // Check connection and load data
+            await checkConnection();
+            await loadDataFromSupabase();
+            
+            // Set up real-time subscriptions
+            setupRealtimeSubscriptions();
             
             // Event listeners
             tabButtons.forEach(button => {
@@ -598,6 +654,41 @@
             
             // Initialize player selection
             renderPlayerSelection();
+        }
+
+        // Set up real-time subscriptions
+        function setupRealtimeSubscriptions() {
+            // Players subscription
+            supabase
+                .channel('players-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+                    loadDataFromSupabase();
+                })
+                .subscribe();
+
+            // Game types subscription
+            supabase
+                .channel('game-types-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'game_types' }, () => {
+                    loadDataFromSupabase();
+                })
+                .subscribe();
+
+            // Games subscription
+            supabase
+                .channel('games-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, () => {
+                    loadDataFromSupabase();
+                })
+                .subscribe();
+
+            // Stats subscription
+            supabase
+                .channel('stats-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'stats' }, () => {
+                    loadDataFromSupabase();
+                })
+                .subscribe();
         }
 
         // Tab switching
@@ -647,8 +738,8 @@
             playersTable.innerHTML = '';
             hiddenPlayersTable.innerHTML = '';
             
-            const activePlayers = appData.players.filter(player => player.isActive);
-            const hiddenPlayers = appData.players.filter(player => !player.isActive);
+            const activePlayers = appData.players.filter(player => player.is_active);
+            const hiddenPlayers = appData.players.filter(player => !player.is_active);
             
             if (activePlayers.length === 0) {
                 playersTable.innerHTML = `
@@ -724,7 +815,7 @@
             const playersSelection = document.getElementById('playersSelection');
             playersSelection.innerHTML = '';
             
-            const activePlayers = appData.players.filter(player => player.isActive);
+            const activePlayers = appData.players.filter(player => player.is_active);
             
             if (activePlayers.length === 0) {
                 playersSelection.innerHTML = `
@@ -862,7 +953,7 @@
             updateTeamSelection();
         }
 
-        function addPlayer() {
+        async function addPlayer() {
             const newPlayerName = document.getElementById('newPlayerName').value.trim();
             
             if (!newPlayerName) {
@@ -878,41 +969,53 @@
             
             const newPlayer = {
                 name: newPlayerName,
-                isActive: true
+                is_active: true
             };
             
-            addToFirebase('players', newPlayer);
-            document.getElementById('newPlayerName').value = '';
-            
-            // Add to history
-            addToHistory(`Yeni oyuncu eklendi: ${newPlayerName}`, 'add');
+            try {
+                await addToSupabase('players', newPlayer);
+                document.getElementById('newPlayerName').value = '';
+                
+                // Add to history
+                await addToHistory(`Yeni oyuncu eklendi: ${newPlayerName}`, 'add');
+            } catch (error) {
+                // Error already handled in addToSupabase
+            }
         }
 
-        function hidePlayer(playerId) {
+        async function hidePlayer(playerId) {
             const player = appData.players.find(p => p.id === playerId);
             
             confirmMessage.textContent = `"${player.name}" oyuncusunu gizlemek istediğinize emin misiniz?`;
             confirmModal.classList.add('active');
             
-            confirmBtn.onclick = () => {
-                updateInFirebase(`players/${playerId}`, { isActive: false });
-                closeConfirmModal();
-                
-                // Add to history
-                addToHistory(`Oyuncu gizlendi: ${player.name}`, 'update');
+            confirmBtn.onclick = async () => {
+                try {
+                    await updateInSupabase('players', playerId, { is_active: false });
+                    closeConfirmModal();
+                    
+                    // Add to history
+                    await addToHistory(`Oyuncu gizlendi: ${player.name}`, 'update');
+                } catch (error) {
+                    // Error already handled in updateInSupabase
+                }
             };
         }
 
-        function unhidePlayer(playerId) {
+        async function unhidePlayer(playerId) {
             const player = appData.players.find(p => p.id === playerId);
             
-            updateInFirebase(`players/${playerId}`, { isActive: true });
-            
-            // Add to history
-            addToHistory(`Oyuncu tekrar aktif edildi: ${player.name}`, 'update');
+            try {
+                await updateInSupabase('players', playerId, { is_active: true });
+                
+                // Add to history
+                await addToHistory(`Oyuncu tekrar aktif edildi: ${player.name}`, 'update');
+            } catch (error) {
+                // Error already handled in updateInSupabase
+            }
         }
 
-        function deletePlayer(playerId) {
+        async function deletePlayer(playerId) {
             const player = appData.players.find(p => p.id === playerId);
             
             // Check if player has been in any game
@@ -928,12 +1031,16 @@
             confirmMessage.textContent = `"${player.name}" oyuncusunu silmek istediğinize emin misiniz?`;
             confirmModal.classList.add('active');
             
-            confirmBtn.onclick = () => {
-                deleteFromFirebase(`players/${playerId}`);
-                closeConfirmModal();
-                
-                // Add to history
-                addToHistory(`Oyuncu silindi: ${player.name}`, 'delete');
+            confirmBtn.onclick = async () => {
+                try {
+                    await deleteFromSupabase('players', playerId);
+                    closeConfirmModal();
+                    
+                    // Add to history
+                    await addToHistory(`Oyuncu silindi: ${player.name}`, 'delete');
+                } catch (error) {
+                    // Error already handled in deleteFromSupabase
+                }
             };
         }
 
@@ -988,7 +1095,7 @@
             });
         }
 
-        function addGameType() {
+        async function addGameType() {
             const newGameType = document.getElementById('newGameType').value.trim();
             
             if (!newGameType) {
@@ -1001,30 +1108,38 @@
                 key: newGameType.toLowerCase().replace(/\s+/g, '-')
             };
             
-            addToFirebase('gameTypes', newGameTypeObj);
-            document.getElementById('newGameType').value = '';
-            
-            // Add to history
-            addToHistory(`Yeni oyun türü eklendi: ${newGameType}`, 'add');
+            try {
+                await addToSupabase('game_types', newGameTypeObj);
+                document.getElementById('newGameType').value = '';
+                
+                // Add to history
+                await addToHistory(`Yeni oyun türü eklendi: ${newGameType}`, 'add');
+            } catch (error) {
+                // Error already handled in addToSupabase
+            }
         }
 
-        function deleteGameType(gameTypeId) {
+        async function deleteGameType(gameTypeId) {
             const gameType = appData.gameTypes.find(gt => gt.id === gameTypeId);
             
             confirmMessage.textContent = `"${gameType.name}" oyun türünü silmek istediğinize emin misiniz?`;
             confirmModal.classList.add('active');
             
-            confirmBtn.onclick = () => {
-                deleteFromFirebase(`gameTypes/${gameTypeId}`);
-                closeConfirmModal();
-                
-                // Add to history
-                addToHistory(`Oyun türü silindi: ${gameType.name}`, 'delete');
+            confirmBtn.onclick = async () => {
+                try {
+                    await deleteFromSupabase('game_types', gameTypeId);
+                    closeConfirmModal();
+                    
+                    // Add to history
+                    await addToHistory(`Oyun türü silindi: ${gameType.name}`, 'delete');
+                } catch (error) {
+                    // Error already handled in deleteFromSupabase
+                }
             };
         }
 
         // Game management
-        function startGame() {
+        async function startGame() {
             const gameTypeKey = document.getElementById('gameType').value;
             const gameFormat = document.getElementById('gameFormat').value;
             
@@ -1056,25 +1171,29 @@
                 } : null,
                 rounds: [],
                 history: [],
-                isActive: true,
-                createdAt: new Date().toISOString()
+                is_active: true,
+                created_at: new Date().toISOString()
             };
             
-            addToFirebase('games', newGame);
-            
-            // Reset selections
-            selectedPlayers = [];
-            team1Players = [];
-            team2Players = [];
-            document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
-            
-            // Add to history
-            addToHistory(`Yeni oyun başlatıldı: ${gameType.name}`, 'add');
+            try {
+                await addToSupabase('games', newGame);
+                
+                // Reset selections
+                selectedPlayers = [];
+                team1Players = [];
+                team2Players = [];
+                document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
+                
+                // Add to history
+                await addToHistory(`Yeni oyun başlatıldı: ${gameType.name}`, 'add');
+            } catch (error) {
+                // Error already handled in addToSupabase
+            }
         }
 
         function renderActiveGames() {
             const activeGamesDiv = document.getElementById('activeGames');
-            const activeGames = appData.games.filter(game => game.isActive);
+            const activeGames = appData.games.filter(game => game.is_active);
             
             if (activeGames.length === 0) {
                 activeGamesDiv.innerHTML = `
@@ -1109,7 +1228,7 @@
                         <div>
                             <h3 class="text-lg font-semibold text-black">${game.type.name}</h3>
                             ${playersText}
-                            <div class="text-sm text-gray-500">Başlangıç: ${new Date(game.createdAt).toLocaleString('tr-TR')}</div>
+                            <div class="text-sm text-gray-500">Başlangıç: ${new Date(game.created_at).toLocaleString('tr-TR')}</div>
                         </div>
                         <button onclick="resumeGame('${game.id}')" class="mt-3 sm:mt-0 btn-primary px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
                             <i class="fas fa-play mr-2"></i>Devam Et
@@ -1127,9 +1246,9 @@
             
             // Apply filter
             if (gameFilter === 'active') {
-                games = games.filter(game => game.isActive);
+                games = games.filter(game => game.is_active);
             } else if (gameFilter === 'finished') {
-                games = games.filter(game => !game.isActive);
+                games = games.filter(game => !game.is_active);
             }
             
             if (games.length === 0) {
@@ -1145,7 +1264,7 @@
             allGamesDiv.innerHTML = '';
             
             // Sort games by creation date (newest first)
-            games.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            games.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             
             games.forEach(game => {
                 const gameCard = document.createElement('div');
@@ -1166,7 +1285,7 @@
                 let statusBadge = '';
                 let actionButton = '';
                 
-                if (game.isActive) {
+                if (game.is_active) {
                     statusBadge = '<span class="px-2 py-1 bg-gray-200 text-gray-800 text-xs font-medium rounded-full">Aktif</span>';
                     actionButton = `
                         <button onclick="resumeGame('${game.id}')" class="btn-primary px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
@@ -1190,8 +1309,8 @@
                                 ${statusBadge}
                             </div>
                             ${playersText}
-                            <div class="text-sm text-gray-500">Başlangıç: ${new Date(game.createdAt).toLocaleString('tr-TR')}</div>
-                            ${game.endedAt ? `<div class="text-sm text-gray-500">Bitiş: ${new Date(game.endedAt).toLocaleString('tr-TR')}</div>` : ''}
+                            <div class="text-sm text-gray-500">Başlangıç: ${new Date(game.created_at).toLocaleString('tr-TR')}</div>
+                            ${game.ended_at ? `<div class="text-sm text-gray-500">Bitiş: ${new Date(game.ended_at).toLocaleString('tr-TR')}</div>` : ''}
                             ${game.winners ? `<div class="text-sm text-gray-700 mt-1">Kazanan: ${game.winners.map(w => w.name).join(', ')}</div>` : ''}
                         </div>
                         ${actionButton}
@@ -1258,7 +1377,7 @@
             renderGameHistory();
             
             // Disable controls if game is finished
-            if (!currentGame.isActive) {
+            if (!currentGame.is_active) {
                 document.getElementById('addRoundBtn').disabled = true;
                 document.getElementById('endGameBtn').disabled = true;
                 document.getElementById('addRoundBtn').classList.add('opacity-50', 'cursor-not-allowed');
@@ -1338,7 +1457,7 @@
             calculateTotals();
         }
 
-        function addRound() {
+        async function addRound() {
             if (!currentGame) return;
             
             const roundNumber = currentGame.rounds.length + 1;
@@ -1357,33 +1476,32 @@
                 });
             }
             
-            // Add round to Firebase
-            const roundRef = database.ref(`games/${currentGame.id}/rounds`).push();
-            newRound.id = roundRef.key;
-            roundRef.set(newRound);
-            
-            addRoundToTable(newRound, roundNumber - 1);
-            
-            // Add to game history
-            const historyItem = {
-                action: 'add',
-                description: `${roundNumber}. el eklendi.`,
-                timestamp: new Date().toISOString()
-            };
-            
-            const historyRef = database.ref(`games/${currentGame.id}/history`).push();
-            historyItem.id = historyRef.key;
-            historyRef.set(historyItem);
-            renderGameHistory();
-            
-            // Add to app history
-            addToHistory(`${currentGame.type.name} oyununda ${roundNumber}. el eklendi.`, 'add');
+            try {
+                // Add round to the game
+                const updatedRounds = [...currentGame.rounds, newRound];
+                await updateInSupabase('games', currentGame.id, { rounds: updatedRounds });
+                
+                // Add to game history
+                const historyItem = {
+                    action: 'add',
+                    description: `${roundNumber}. el eklendi.`,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const updatedHistory = [...currentGame.history, historyItem];
+                await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                
+                // Add to app history
+                await addToHistory(`${currentGame.type.name} oyununda ${roundNumber}. el eklendi.`, 'add');
+            } catch (error) {
+                // Error already handled in updateInSupabase
+            }
         }
 
         function addRoundToTable(round, index) {
             const scoreTableBody = document.getElementById('scoreTableBody');
             const row = document.createElement('tr');
-            row.id = `round-${round.id}`;
+            row.id = `round-${index}`;
             row.className = 'hover:bg-gray-50';
             
             // Round number
@@ -1397,11 +1515,11 @@
                 row.innerHTML += `
                     <td class="px-4 py-3 whitespace-nowrap">
                         <input type="number" class="score-input w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500" 
-                               data-round-id="${round.id}" data-team="team1" value="${team1Value}" ${!currentGame.isActive ? 'disabled' : ''}>
+                               data-round-index="${index}" data-team="team1" value="${team1Value}" ${!currentGame.is_active ? 'disabled' : ''}>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap">
                         <input type="number" class="score-input w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500" 
-                               data-round-id="${round.id}" data-team="team2" value="${team2Value}" ${!currentGame.isActive ? 'disabled' : ''}>
+                               data-round-index="${index}" data-team="team2" value="${team2Value}" ${!currentGame.is_active ? 'disabled' : ''}>
                     </td>
                 `;
             } else {
@@ -1411,19 +1529,19 @@
                     row.innerHTML += `
                         <td class="px-4 py-3 whitespace-nowrap">
                             <input type="number" class="score-input w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500" 
-                                   data-round-id="${round.id}" data-player-id="${player.id}" value="${playerValue}" ${!currentGame.isActive ? 'disabled' : ''}>
+                                   data-round-index="${index}" data-player-id="${player.id}" value="${playerValue}" ${!currentGame.is_active ? 'disabled' : ''}>
                         </td>
                     `;
                 });
             }
             
             // Actions
-            const deleteDisabled = !currentGame.isActive ? 'disabled' : '';
-            const deleteClass = !currentGame.isActive ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 hover:text-gray-900';
+            const deleteDisabled = !currentGame.is_active ? 'disabled' : '';
+            const deleteClass = !currentGame.is_active ? 'opacity-50 cursor-not-allowed' : 'text-gray-600 hover:text-gray-900';
             
             row.innerHTML += `
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                    <button onclick="deleteRound('${round.id}')" class="${deleteClass} focus:outline-none" ${deleteDisabled}>
+                    <button onclick="deleteRound(${index})" class="${deleteClass} focus:outline-none" ${deleteDisabled}>
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -1432,7 +1550,7 @@
             scoreTableBody.appendChild(row);
             
             // Add event listeners to score inputs only if game is active
-            if (currentGame.isActive) {
+            if (currentGame.is_active) {
                 const scoreInputs = row.querySelectorAll('.score-input');
                 scoreInputs.forEach(input => {
                     input.addEventListener('change', updateScore);
@@ -1443,10 +1561,10 @@
             highlightLowestScore();
         }
 
-        function updateScore(event) {
+        async function updateScore(event) {
             const input = event.target;
-            const roundId = input.dataset.roundId;
-            const round = currentGame.rounds.find(r => r.id === roundId);
+            const roundIndex = parseInt(input.dataset.roundIndex);
+            const round = currentGame.rounds[roundIndex];
             
             // Get current value
             let currentValue;
@@ -1458,9 +1576,6 @@
                 currentValue = input.value === '' ? 0 : parseInt(input.value) || 0;
                 round.scores[team] = currentValue;
                 playerOrTeam = team === 'team1' ? 'Takım 1' : 'Takım 2';
-                
-                // Update Firebase
-                database.ref(`games/${currentGame.id}/rounds/${roundId}/scores/${team}`).set(currentValue);
             } else {
                 const playerId = input.dataset.playerId;
                 // Convert empty string to 0, otherwise parse as number
@@ -1468,62 +1583,67 @@
                 round.scores[playerId] = currentValue;
                 const player = currentGame.players.find(p => p.id === playerId);
                 playerOrTeam = player.name;
-                
-                // Update Firebase
-                database.ref(`games/${currentGame.id}/rounds/${roundId}/scores/${playerId}`).set(currentValue);
             }
             
-            // Update totals
-            calculateTotals();
-            
-            // Highlight lowest score
-            highlightLowestScore();
-            
-            // Add to game history
-            const historyItem = {
-                action: 'update',
-                description: `${currentGame.type.name} oyununda ${round.number}. el ${playerOrTeam}'nin puanı ${currentValue} olarak girildi.`,
-                timestamp: new Date().toISOString()
-            };
-            
-            const historyRef = database.ref(`games/${currentGame.id}/history`).push();
-            historyItem.id = historyRef.key;
-            historyRef.set(historyItem);
-            renderGameHistory();
-            
-            // Add to app history
-            addToHistory(`${currentGame.type.name} oyununda ${round.number}. el ${playerOrTeam}'nin puanı güncellendi.`, 'update');
+            try {
+                // Update rounds in Supabase
+                await updateInSupabase('games', currentGame.id, { rounds: currentGame.rounds });
+                
+                // Update totals
+                calculateTotals();
+                
+                // Highlight lowest score
+                highlightLowestScore();
+                
+                // Add to game history
+                const historyItem = {
+                    action: 'update',
+                    description: `${currentGame.type.name} oyununda ${round.number}. el ${playerOrTeam}'nin puanı ${currentValue} olarak girildi.`,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const updatedHistory = [...currentGame.history, historyItem];
+                await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                
+                // Add to app history
+                await addToHistory(`${currentGame.type.name} oyununda ${round.number}. el ${playerOrTeam}'nin puanı güncellendi.`, 'update');
+            } catch (error) {
+                // Error already handled in updateInSupabase
+            }
         }
 
-        function deleteRound(roundId) {
-            const round = currentGame.rounds.find(r => r.id === roundId);
+        async function deleteRound(roundIndex) {
+            const round = currentGame.rounds[roundIndex];
             
             confirmMessage.textContent = `${round.number}. eli silmek istediğinize emin misiniz?`;
             confirmModal.classList.add('active');
             
-            confirmBtn.onclick = () => {
-                // Remove round from Firebase
-                database.ref(`games/${currentGame.id}/rounds/${roundId}`).remove();
-                
-                // Re-render table
-                renderScoreTable();
-                
-                // Add to game history
-                const historyItem = {
-                    action: 'delete',
-                    description: `${currentGame.type.name} oyununda ${round.number}. el silindi.`,
-                    timestamp: new Date().toISOString()
-                };
-                
-                const historyRef = database.ref(`games/${currentGame.id}/history`).push();
-                historyItem.id = historyRef.key;
-                historyRef.set(historyItem);
-                renderGameHistory();
-                
-                // Add to app history
-                addToHistory(`${currentGame.type.name} oyununda ${round.number}. el silindi.`, 'delete');
-                
-                closeConfirmModal();
+            confirmBtn.onclick = async () => {
+                try {
+                    // Remove round
+                    const updatedRounds = currentGame.rounds.filter((_, index) => index !== roundIndex);
+                    await updateInSupabase('games', currentGame.id, { rounds: updatedRounds });
+                    
+                    // Re-render table
+                    renderScoreTable();
+                    
+                    // Add to game history
+                    const historyItem = {
+                        action: 'delete',
+                        description: `${currentGame.type.name} oyununda ${round.number}. el silindi.`,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    const updatedHistory = [...currentGame.history, historyItem];
+                    await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                    
+                    // Add to app history
+                    await addToHistory(`${currentGame.type.name} oyununda ${round.number}. el silindi.`, 'delete');
+                    
+                    closeConfirmModal();
+                } catch (error) {
+                    // Error already handled in updateInSupabase
+                }
             };
         }
 
@@ -1612,8 +1732,8 @@
             if (!currentGame || currentGame.rounds.length === 0) return;
             
             // For each round, find the lowest score
-            currentGame.rounds.forEach(round => {
-                const row = document.getElementById(`round-${round.id}`);
+            currentGame.rounds.forEach((round, index) => {
+                const row = document.getElementById(`round-${index}`);
                 if (!row) return;
                 
                 // Remove existing highlights
@@ -1655,109 +1775,127 @@
             });
         }
 
-        function endGame() {
+        async function endGame() {
             if (!currentGame) return;
             
             confirmMessage.textContent = 'Oyunu bitirmek istediğinize emin misiniz?';
             confirmModal.classList.add('active');
             
-            confirmBtn.onclick = () => {
-                // Determine winner(s)
-                let winners = [];
-                
-                if (currentGame.format === 'team') {
-                    let team1Total = 0;
-                    let team2Total = 0;
+            confirmBtn.onclick = async () => {
+                try {
+                    // Determine winner(s)
+                    let winners = [];
                     
-                    currentGame.rounds.forEach(round => {
-                        team1Total += round.scores.team1 || 0;
-                        team2Total += round.scores.team2 || 0;
-                    });
-                    
-                    if (team1Total < team2Total) {
-                        winners = [...currentGame.teams.team1];
-                    } else if (team2Total < team1Total) {
-                        winners = [...currentGame.teams.team2];
-                    } else {
-                        // Tie
-                        winners = [...currentGame.teams.team1, ...currentGame.teams.team2];
-                    }
-                } else {
-                    const totals = {};
-                    
-                    // Initialize totals
-                    currentGame.players.forEach(player => {
-                        totals[player.id] = 0;
-                    });
-                    
-                    // Calculate totals
-                    currentGame.rounds.forEach(round => {
-                        currentGame.players.forEach(player => {
-                            totals[player.id] += round.scores[player.id] || 0;
+                    if (currentGame.format === 'team') {
+                        let team1Total = 0;
+                        let team2Total = 0;
+                        
+                        currentGame.rounds.forEach(round => {
+                            team1Total += round.scores.team1 || 0;
+                            team2Total += round.scores.team2 || 0;
                         });
-                    });
-                    
-                    // Find lowest score
-                    let lowestScore = Infinity;
-                    
-                    currentGame.players.forEach(player => {
-                        if (totals[player.id] < lowestScore) {
-                            lowestScore = totals[player.id];
-                            winners = [player];
-                        } else if (totals[player.id] === lowestScore) {
-                            winners.push(player);
+                        
+                        if (team1Total < team2Total) {
+                            winners = [...currentGame.teams.team1];
+                        } else if (team2Total < team1Total) {
+                            winners = [...currentGame.teams.team2];
+                        } else {
+                            // Tie
+                            winners = [...currentGame.teams.team1, ...currentGame.teams.team2];
                         }
-                    });
+                    } else {
+                        const totals = {};
+                        
+                        // Initialize totals
+                        currentGame.players.forEach(player => {
+                            totals[player.id] = 0;
+                        });
+                        
+                        // Calculate totals
+                        currentGame.rounds.forEach(round => {
+                            currentGame.players.forEach(player => {
+                                totals[player.id] += round.scores[player.id] || 0;
+                            });
+                        });
+                        
+                        // Find lowest score
+                        let lowestScore = Infinity;
+                        
+                        currentGame.players.forEach(player => {
+                            if (totals[player.id] < lowestScore) {
+                                lowestScore = totals[player.id];
+                                winners = [player];
+                            } else if (totals[player.id] === lowestScore) {
+                                winners.push(player);
+                            }
+                        });
+                    }
+                    
+                    // Update game status
+                    const updates = {
+                        is_active: false,
+                        ended_at: new Date().toISOString(),
+                        winners: winners
+                    };
+                    
+                    await updateInSupabase('games', currentGame.id, updates);
+                    
+                    // Update stats
+                    for (const winner of winners) {
+                        if (!appData.stats[winner.id]) {
+                            appData.stats[winner.id] = {};
+                        }
+                        
+                        if (!appData.stats[winner.id][currentGame.type.key]) {
+                            appData.stats[winner.id][currentGame.type.key] = 0;
+                        }
+                        
+                        appData.stats[winner.id][currentGame.type.key]++;
+                        
+                        // Update or insert stats in Supabase
+                        const { data: existingStat } = await supabase
+                            .from('stats')
+                            .select('*')
+                            .eq('player_id', winner.id)
+                            .eq('game_type_key', currentGame.type.key)
+                            .single();
+                        
+                        if (existingStat) {
+                            await updateInSupabase('stats', existingStat.id, { 
+                                wins: appData.stats[winner.id][currentGame.type.key] 
+                            });
+                        } else {
+                            await addToSupabase('stats', {
+                                player_id: winner.id,
+                                game_type_key: currentGame.type.key,
+                                wins: 1
+                            });
+                        }
+                    }
+                    
+                    // Add to game history
+                    const historyItem = {
+                        action: 'end',
+                        description: `Oyun bitti. Kazananlar: ${winners.map(w => w.name).join(', ')}`,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    const updatedHistory = [...currentGame.history, historyItem];
+                    await updateInSupabase('games', currentGame.id, { history: updatedHistory });
+                    
+                    // Add to app history
+                    await addToHistory(`${currentGame.type.name} oyunu bitti. Kazananlar: ${winners.map(w => w.name).join(', ')}`, 'add');
+                    
+                    // Close game view and refresh
+                    backToHome();
+                    renderActiveGames();
+                    renderAllGames();
+                    renderStats();
+                    
+                    closeConfirmModal();
+                } catch (error) {
+                    // Error already handled in updateInSupabase
                 }
-                
-                // Update game status
-                const updates = {
-                    isActive: false,
-                    endedAt: new Date().toISOString(),
-                    winners: winners
-                };
-                
-                // Update Firebase
-                database.ref(`games/${currentGame.id}`).update(updates);
-                
-                // Update stats
-                winners.forEach(winner => {
-                    if (!appData.stats[winner.id]) {
-                        appData.stats[winner.id] = {};
-                    }
-                    
-                    if (!appData.stats[winner.id][currentGame.type.key]) {
-                        appData.stats[winner.id][currentGame.type.key] = 0;
-                    }
-                    
-                    appData.stats[winner.id][currentGame.type.key]++;
-                    
-                    // Update Firebase stats
-                    database.ref(`stats/${winner.id}/${currentGame.type.key}`).set(appData.stats[winner.id][currentGame.type.key]);
-                });
-                
-                // Add to game history
-                const historyItem = {
-                    action: 'end',
-                    description: `Oyun bitti. Kazananlar: ${winners.map(w => w.name).join(', ')}`,
-                    timestamp: new Date().toISOString()
-                };
-                
-                const historyRef = database.ref(`games/${currentGame.id}/history`).push();
-                historyItem.id = historyRef.key;
-                historyRef.set(historyItem);
-                renderGameHistory();
-                
-                // Add to app history
-                addToHistory(`${currentGame.type.name} oyunu bitti. Kazananlar: ${winners.map(w => w.name).join(', ')}`, 'add');
-                
-                // Close game view and refresh
-                backToHome();
-                renderActiveGames();
-                renderAllGames();
-                renderStats();
-                
-                closeConfirmModal();
             };
         }
 
@@ -1822,7 +1960,7 @@
             const winnersTable = document.getElementById('winnersTable');
             winnersTable.innerHTML = '';
             
-            const activePlayers = appData.players.filter(player => player.isActive);
+            const activePlayers = appData.players.filter(player => player.is_active);
             
             if (activePlayers.length === 0) {
                 winnersTable.innerHTML = `
@@ -1892,14 +2030,18 @@
         }
 
         // History
-        function addToHistory(description, action) {
+        async function addToHistory(description, action) {
             const historyItem = {
                 action: action,
                 description: description,
-                timestamp: new Date().toISOString()
+                created_at: new Date().toISOString()
             };
             
-            addToFirebase('history', historyItem);
+            try {
+                await addToSupabase('app_history', historyItem);
+            } catch (error) {
+                // Error already handled in addToSupabase
+            }
         }
 
         function closeConfirmModal() {
