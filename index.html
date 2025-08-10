@@ -135,292 +135,397 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        /* Connection indicator */
+        .connection-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            z-index: 1000;
+            transition: background-color 0.3s ease;
+        }
+        .connection-indicator.connecting {
+            background-color: #f59e0b; /* yellow */
+        }
+        .connection-indicator.online {
+            background-color: #10b981; /* green */
+        }
+        .connection-indicator.offline {
+            background-color: #ef4444; /* red */
+        }
+        /* Login form */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f9fafb;
+        }
+        .login-form {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 400px;
+        }
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            background-color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            z-index: 1000;
+        }
     </style>
 </head>
-<body class="bg-white min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-6xl">
-        <!-- Header -->
-        <header class="mb-10 text-center border-b border-gray-200 pb-6">
-            <h1 class="text-4xl font-bold text-black mb-2">Oyun Puan Takip Sistemi</h1>
-            <p class="text-gray-600">101 Okey, Uno ve diğer oyunlar için puan takip uygulaması</p>
-            <div id="connection-status" class="mt-2 text-sm">
-                <span class="text-gray-500">Bağlanıyor...</span>
+<body>
+    <!-- Connection Indicator -->
+    <div id="connectionIndicator" class="connection-indicator connecting"></div>
+    
+    <!-- Login Form -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-form">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Oyun Puan Takip Sistemi</h2>
+            <div class="mb-4">
+                <label for="username" class="block text-gray-700 font-medium mb-2">Kullanıcı Adı</label>
+                <input type="text" id="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500" placeholder="Kullanıcı adı">
             </div>
-        </header>
-        <!-- Navigation Tabs -->
-        <div class="nav-tabs mb-8">
-            <div class="nav-tabs-container border-b border-gray-300">
-                <button class="tab-btn px-6 py-3 font-medium text-black border-b-2 border-black focus:outline-none whitespace-nowrap" data-tab="home">
-                    <i class="fas fa-home mr-2"></i>Ana Sayfa
-                </button>
-                <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="games-list">
-                    <i class="fas fa-list mr-2"></i>Oyunlar
-                </button>
-                <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="players">
-                    <i class="fas fa-users mr-2"></i>Oyuncular
-                </button>
-                <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="game-types">
-                    <i class="fas fa-gamepad mr-2"></i>Oyun Türleri
-                </button>
-                <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="stats">
-                    <i class="fas fa-chart-bar mr-2"></i>İstatistikler
+            <div class="mb-6">
+                <label for="password" class="block text-gray-700 font-medium mb-2">Şifre</label>
+                <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500" placeholder="Şifre">
+            </div>
+            <div id="loginError" class="mb-4 text-red-600 text-sm hidden"></div>
+            <button id="loginBtn" class="w-full btn-primary py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                Giriş Yap
+            </button>
+            <div class="mt-4 text-center">
+                <button id="changePasswordBtn" class="text-gray-600 hover:text-gray-900 focus:outline-none text-sm">
+                    Şifremi Değiştir
                 </button>
             </div>
         </div>
-        <!-- Home Tab Content -->
-        <div id="home" class="tab-content active">
-            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-                <h2 class="text-2xl font-bold text-black mb-6">Yeni Oyun Başlat</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-gray-700 font-medium mb-2">Oyun Türü</label>
-                        <select id="gameType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                            <option value="">Oyun Türü Seçin</option>
-                            <option value="101-okey">101 Okey</option>
-                            <option value="uno">Uno</option>
-                            <option value="düz-okey">Düz Okey</option>
-                        </select>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md border border-gray-200">
+            <div class="p-6">
+                <h3 class="text-xl font-bold text-black mb-4">Şifre Değiştir</h3>
+                <div class="mb-4">
+                    <label for="currentPassword" class="block text-gray-700 font-medium mb-2">Mevcut Şifre</label>
+                    <input type="password" id="currentPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                </div>
+                <div class="mb-4">
+                    <label for="newPassword" class="block text-gray-700 font-medium mb-2">Yeni Şifre</label>
+                    <input type="password" id="newPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                </div>
+                <div class="mb-4">
+                    <label for="confirmNewPassword" class="block text-gray-700 font-medium mb-2">Yeni Şifre (Tekrar)</label>
+                    <input type="password" id="confirmNewPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                </div>
+                <div id="changePasswordError" class="mb-4 text-red-600 text-sm hidden"></div>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancelChangePasswordBtn" class="px-4 py-2 btn-secondary rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        İptal
+                    </button>
+                    <button id="confirmChangePasswordBtn" class="px-4 py-2 btn-primary text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        Değiştir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- User Info -->
+        <div id="userInfo" class="user-info">
+            <span class="text-gray-700 mr-3">Hoş geldin, <span id="currentUser" class="font-medium"></span></span>
+            <button id="logoutBtn" class="text-gray-600 hover:text-gray-900 focus:outline-none">
+                <i class="fas fa-sign-out-alt"></i> Çıkış
+            </button>
+        </div>
+
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+            <!-- Header -->
+            <header class="mb-10 text-center border-b border-gray-200 pb-6">
+                <h1 class="text-4xl font-bold text-black mb-2">Oyun Puan Takip Sistemi</h1>
+                <p class="text-gray-600">101 Okey, Uno ve diğer oyunlar için puan takip uygulaması</p>
+            </header>
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs mb-8">
+                <div class="nav-tabs-container border-b border-gray-300">
+                    <button class="tab-btn px-6 py-3 font-medium text-black border-b-2 border-black focus:outline-none whitespace-nowrap" data-tab="home">
+                        <i class="fas fa-home mr-2"></i>Ana Sayfa
+                    </button>
+                    <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="games-list">
+                        <i class="fas fa-list mr-2"></i>Oyunlar
+                    </button>
+                    <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="players">
+                        <i class="fas fa-users mr-2"></i>Oyuncular
+                    </button>
+                    <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="game-types">
+                        <i class="fas fa-gamepad mr-2"></i>Oyun Türleri
+                    </button>
+                    <button class="tab-btn px-6 py-3 font-medium text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap" data-tab="stats">
+                        <i class="fas fa-chart-bar mr-2"></i>İstatistikler
+                    </button>
+                </div>
+            </div>
+            <!-- Home Tab Content -->
+            <div id="home" class="tab-content active">
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                    <h2 class="text-2xl font-bold text-black mb-6">Yeni Oyun Başlat</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Oyun Türü</label>
+                            <select id="gameType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                <option value="">Oyun Türü Seçin</option>
+                                <option value="101-okey">101 Okey</option>
+                                <option value="uno">Uno</option>
+                                <option value="düz-okey">Düz Okey</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Oyun Formatı</label>
+                            <select id="gameFormat" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                <option value="individual">Bireysel</option>
+                                <option value="team">Takımlı</option>
+                            </select>
+                        </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-gray-700 font-medium mb-2">Oyun Formatı</label>
-                        <select id="gameFormat" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                            <option value="individual">Bireysel</option>
-                            <option value="team">Takımlı</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2">Oyuncular</label>
-                    <div id="playersSelection" class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <!-- Players will be dynamically added here -->
-                    </div>
-                </div>
-                
-                <div id="teamSelection" class="hidden mb-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="team-red p-4 rounded-lg">
-                            <h3 class="font-medium text-black mb-3">Takım 1</h3>
-                            <div id="team1" class="space-y-2">
-                                <!-- Team 1 players will be added here -->
-                            </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 font-medium mb-2">Oyuncular</label>
+                        <div id="playersSelection" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <!-- Players will be dynamically added here -->
                         </div>
-                        <div class="team-blue p-4 rounded-lg">
-                            <h3 class="font-medium text-gray-700 mb-3">Takım 2</h3>
-                            <div id="team2" class="space-y-2">
-                                <!-- Team 2 players will be added here -->
+                    </div>
+                    
+                    <div id="teamSelection" class="hidden mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="team-red p-4 rounded-lg">
+                                <h3 class="font-medium text-black mb-3">Takım 1</h3>
+                                <div id="team1" class="space-y-2">
+                                    <!-- Team 1 players will be added here -->
+                                </div>
+                            </div>
+                            <div class="team-blue p-4 rounded-lg">
+                                <h3 class="font-medium text-gray-700 mb-3">Takım 2</h3>
+                                <div id="team2" class="space-y-2">
+                                    <!-- Team 2 players will be added here -->
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <button id="startGameBtn" class="w-full btn-primary py-3 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                    Oyunu Başlat
-                </button>
-            </div>
-            
-            <!-- Active Games -->
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <h2 class="text-2xl font-bold text-black mb-6">Aktif Oyunlar</h2>
-                <div id="activeGames" class="space-y-4">
-                    <!-- Active games will be displayed here -->
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-gamepad text-4xl mb-3"></i>
-                        <p>Aktif oyun bulunmamaktadır.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Games List Tab Content -->
-        <div id="games-list" class="tab-content">
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <h2 class="text-2xl font-bold text-black mb-6">Tüm Oyunlar</h2>
-                
-                <div class="mb-6 flex space-x-4">
-                    <button id="filterAllBtn" class="px-4 py-2 btn-primary rounded-lg font-medium transition duration-300">
-                        Tümü
-                    </button>
-                    <button id="filterActiveBtn" class="px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300">
-                        Aktif
-                    </button>
-                    <button id="filterFinishedBtn" class="px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300">
-                        Bitmiş
+                    
+                    <button id="startGameBtn" class="w-full btn-primary py-3 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                        Oyunu Başlat
                     </button>
                 </div>
                 
-                <div id="allGames" class="space-y-4">
-                    <!-- All games will be displayed here -->
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-gamepad text-4xl mb-3"></i>
-                        <p>Henüz oyun bulunmamaktadır.</p>
+                <!-- Active Games -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                    <h2 class="text-2xl font-bold text-black mb-6">Aktif Oyunlar</h2>
+                    <div id="activeGames" class="space-y-4">
+                        <!-- Active games will be displayed here -->
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-gamepad text-4xl mb-3"></i>
+                            <p>Aktif oyun bulunmamaktadır.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <!-- Players Tab Content -->
-        <div id="players" class="tab-content">
-            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-                <h2 class="text-2xl font-bold text-black mb-6">Oyuncu Yönetimi</h2>
-                
-                <div class="mb-6">
-                    <div class="flex">
-                        <input type="text" id="newPlayerName" placeholder="Yeni oyuncu adı" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                        <button id="addPlayerBtn" class="btn-primary px-6 py-2 rounded-r-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                            <i class="fas fa-plus mr-2"></i>Ekle
+            <!-- Games List Tab Content -->
+            <div id="games-list" class="tab-content">
+                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                    <h2 class="text-2xl font-bold text-black mb-6">Tüm Oyunlar</h2>
+                    
+                    <div class="mb-6 flex space-x-4">
+                        <button id="filterAllBtn" class="px-4 py-2 btn-primary rounded-lg font-medium transition duration-300">
+                            Tümü
                         </button>
-                    </div>
-                </div>
-                
-                <div class="mb-8">
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Aktif Oyuncular</h3>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyuncu Adı</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-                                </tr>
-                            </thead>
-                            <tbody id="playersTable" class="bg-white divide-y divide-gray-200">
-                                <!-- Players will be dynamically added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Gizlenen Oyuncular</h3>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyuncu Adı</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-                                </tr>
-                            </thead>
-                            <tbody id="hiddenPlayersTable" class="bg-white divide-y divide-gray-200">
-                                <!-- Hidden players will be dynamically added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Game Types Tab Content -->
-        <div id="game-types" class="tab-content">
-            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-                <h2 class="text-2xl font-bold text-black mb-6">Oyun Türleri</h2>
-                
-                <div class="mb-6">
-                    <div class="flex">
-                        <input type="text" id="newGameType" placeholder="Yeni oyun türü" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
-                        <button id="addGameTypeBtn" class="btn-primary px-6 py-2 rounded-r-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                            <i class="fas fa-plus mr-2"></i>Ekle
+                        <button id="filterActiveBtn" class="px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300">
+                            Aktif
                         </button>
-                    </div>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyun Türü</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-                            </tr>
-                        </thead>
-                        <tbody id="gameTypesTable" class="bg-white divide-y divide-gray-200">
-                            <!-- Game types will be dynamically added here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <!-- Stats Tab Content -->
-        <div id="stats" class="tab-content">
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <h2 class="text-2xl font-bold text-black mb-6">İstatistikler</h2>
-                
-                <div>
-                    <h3 class="text-xl font-semibold text-gray-700 mb-4">Oyun Kazananları</h3>
-                    <div id="winnersStats" class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyuncu</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">101 Okey</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uno</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Düz Okey</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam</th>
-                                </tr>
-                            </thead>
-                            <tbody id="winnersTable" class="bg-white divide-y divide-gray-200">
-                                <!-- Stats will be dynamically added here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Game View -->
-        <div id="game-view" class="game-view">
-            <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                    <h2 id="gameTitle" class="text-2xl font-bold text-black mb-4 md:mb-0">Oyun Adı</h2>
-                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-                        <button id="backToHomeBtn" class="px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300 focus:outline-none">
-                            <i class="fas fa-arrow-left mr-2"></i>Ana Sayfa
-                        </button>
-                        <button id="endGameBtn" class="px-4 py-2 btn-danger text-white rounded-lg font-medium transition duration-300 focus:outline-none">
-                            <i class="fas fa-flag-checkered mr-2"></i>Oyunu Bitir
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="mb-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                        <h3 class="text-xl font-semibold text-black mb-4 sm:mb-0">Puan Cetveli</h3>
-                        <button id="addRoundBtn" class="btn-success px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                            <i class="fas fa-plus mr-2"></i>Yeni El Ekle
+                        <button id="filterFinishedBtn" class="px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300">
+                            Bitmiş
                         </button>
                     </div>
                     
+                    <div id="allGames" class="space-y-4">
+                        <!-- All games will be displayed here -->
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-gamepad text-4xl mb-3"></i>
+                            <p>Henüz oyun bulunmamaktadır.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Players Tab Content -->
+            <div id="players" class="tab-content">
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                    <h2 class="text-2xl font-bold text-black mb-6">Oyuncu Yönetimi</h2>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Aktif Oyuncular</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyuncu Adı</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="playersTable" class="bg-white divide-y divide-gray-200">
+                                    <!-- Players will be dynamically added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Gizlenen Oyuncular</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyuncu Adı</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="hiddenPlayersTable" class="bg-white divide-y divide-gray-200">
+                                    <!-- Hidden players will be dynamically added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Game Types Tab Content -->
+            <div id="game-types" class="tab-content">
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                    <h2 class="text-2xl font-bold text-black mb-6">Oyun Türleri</h2>
+                    
+                    <div class="mb-6">
+                        <div class="flex">
+                            <input type="text" id="newGameType" placeholder="Yeni oyun türü" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            <button id="addGameTypeBtn" class="btn-primary px-6 py-2 rounded-r-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                <i class="fas fa-plus mr-2"></i>Ekle
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="overflow-x-auto">
-                        <table id="scoreTable" class="min-w-full divide-y divide-gray-200">
+                        <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">El</th>
-                                    <!-- Player headers will be dynamically added here -->
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyun Türü</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
                                 </tr>
                             </thead>
-                            <tbody id="scoreTableBody" class="bg-white divide-y divide-gray-200">
-                                <!-- Score rows will be dynamically added here -->
+                            <tbody id="gameTypesTable" class="bg-white divide-y divide-gray-200">
+                                <!-- Game types will be dynamically added here -->
                             </tbody>
-                            <tfoot class="bg-gray-50">
-                                <tr>
-                                    <td class="px-4 py-3 font-medium">Toplam</td>
-                                    <!-- Total scores will be dynamically added here -->
-                                </tr>
-                            </tfoot>
                         </table>
                     </div>
                 </div>
-                
-                <div>
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                        <h3 class="text-xl font-semibold text-black mb-4 sm:mb-0">Oyun Geçmişi</h3>
-                        <button id="toggleHistoryBtn" class="px-4 py-2 btn-primary rounded-lg font-medium transition duration-300 focus:outline-none">
-                            <i class="fas fa-history mr-2"></i>Geçmişi Göster/Gizle
-                        </button>
+            </div>
+            <!-- Stats Tab Content -->
+            <div id="stats" class="tab-content">
+                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                    <h2 class="text-2xl font-bold text-black mb-6">İstatistikler</h2>
+                    
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">Oyun Kazananları</h3>
+                        <div id="winnersStats" class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oyuncu</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">101 Okey</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uno</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Düz Okey</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Toplam</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="winnersTable" class="bg-white divide-y divide-gray-200">
+                                    <!-- Stats will be dynamically added here -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div id="gameHistory" class="game-history">
-                        <!-- Game history will be dynamically added here -->
+                </div>
+            </div>
+            <!-- Game View -->
+            <div id="game-view" class="game-view">
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                        <h2 id="gameTitle" class="text-2xl font-bold text-black mb-4 md:mb-0">Oyun Adı</h2>
+                        <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                            <button id="backToHomeBtn" class="px-4 py-2 btn-secondary rounded-lg font-medium transition duration-300 focus:outline-none">
+                                <i class="fas fa-arrow-left mr-2"></i>Ana Sayfa
+                            </button>
+                            <button id="endGameBtn" class="px-4 py-2 btn-danger text-white rounded-lg font-medium transition duration-300 focus:outline-none">
+                                <i class="fas fa-flag-checkered mr-2"></i>Oyunu Bitir
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                            <h3 class="text-xl font-semibold text-black mb-4 sm:mb-0">Puan Cetveli</h3>
+                            <button id="addRoundBtn" class="btn-success px-4 py-2 rounded-lg font-medium transition duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                                <i class="fas fa-plus mr-2"></i>Yeni El Ekle
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table id="scoreTable" class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">El</th>
+                                        <!-- Player headers will be dynamically added here -->
+                                    </tr>
+                                </thead>
+                                <tbody id="scoreTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Score rows will be dynamically added here -->
+                                </tbody>
+                                <tfoot class="bg-gray-50">
+                                    <tr>
+                                        <td class="px-4 py-3 font-medium">Toplam</td>
+                                        <!-- Total scores will be dynamically added here -->
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                            <h3 class="text-xl font-semibold text-black mb-4 sm:mb-0">Oyun Geçmişi</h3>
+                            <button id="toggleHistoryBtn" class="px-4 py-2 btn-primary rounded-lg font-medium transition duration-300 focus:outline-none">
+                                <i class="fas fa-history mr-2"></i>Geçmişi Göster/Gizle
+                            </button>
+                        </div>
+                        <div id="gameHistory" class="game-history">
+                            <!-- Game history will be dynamically added here -->
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
     <!-- Confirmation Modal -->
     <div id="confirmModal" class="modal">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md border border-gray-200">
@@ -439,7 +544,7 @@
         </div>
     </div>
     <script>
-        // Supabase Configuration - Netlify ortam değişkenleri kullanarak
+        // Supabase Configuration
         const supabaseUrl = "https://epjktesoejhrphpjmkqo.supabase.co"; // Buraya kendi Supabase URL'nizi yazın
         const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwamt0ZXNvZWpocnBocGpta3FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4Mzc5NTEsImV4cCI6MjA3MDQxMzk1MX0.8Nlk9Hf8SZVNnIt5lMVps7SksppsD5MWcYWlxT4FE1Y"; // Buraya kendi Supabase anon key'inizi yazın
         
@@ -462,7 +567,29 @@
         let team2Players = [];
         let gameFilter = 'all'; // all, active, finished
         
+        // User state
+        let currentUser = null;
+        
         // DOM Elements
+        const loginContainer = document.getElementById('loginContainer');
+        const mainApp = document.getElementById('mainApp');
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginError = document.getElementById('loginError');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+        const changePasswordModal = document.getElementById('changePasswordModal');
+        const currentPasswordInput = document.getElementById('currentPassword');
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
+        const changePasswordError = document.getElementById('changePasswordError');
+        const cancelChangePasswordBtn = document.getElementById('cancelChangePasswordBtn');
+        const confirmChangePasswordBtn = document.getElementById('confirmChangePasswordBtn');
+        const userInfo = document.getElementById('userInfo');
+        const currentUserSpan = document.getElementById('currentUser');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const connectionIndicator = document.getElementById('connectionIndicator');
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
         const gameView = document.getElementById('game-view');
@@ -470,16 +597,154 @@
         const confirmMessage = document.getElementById('confirmMessage');
         const confirmBtn = document.getElementById('confirmBtn');
         const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
-        const connectionStatus = document.getElementById('connection-status');
+
+        // Check if user is logged in
+        function checkLoggedInUser() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showMainApp();
+            } else {
+                showLoginForm();
+            }
+        }
+
+        // Show login form
+        function showLoginForm() {
+            loginContainer.classList.remove('hidden');
+            mainApp.classList.add('hidden');
+            userInfo.classList.add('hidden');
+        }
+
+        // Show main app
+        function showMainApp() {
+            loginContainer.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            userInfo.classList.remove('hidden');
+            currentUserSpan.textContent = currentUser.username;
+        }
+
+        // Login function
+        async function login() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!username || !password) {
+                loginError.textContent = 'Lütfen kullanıcı adı ve şifre girin.';
+                loginError.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('username', username)
+                    .eq('password', password)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (data) {
+                    currentUser = data;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    showMainApp();
+                    await initApp();
+                } else {
+                    loginError.textContent = 'Kullanıcı adı veya şifre hatalı.';
+                    loginError.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                loginError.textContent = 'Giriş yapılırken bir hata oluştu.';
+                loginError.classList.remove('hidden');
+            }
+        }
+
+        // Logout function
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            showLoginForm();
+        }
+
+        // Change password function
+        async function changePassword() {
+            const currentPassword = currentPasswordInput.value.trim();
+            const newPassword = newPasswordInput.value.trim();
+            const confirmNewPassword = confirmNewPasswordInput.value.trim();
+            
+            if (!currentPassword || !newPassword || !confirmNewPassword) {
+                changePasswordError.textContent = 'Lütfen tüm alanları doldurun.';
+                changePasswordError.classList.remove('hidden');
+                return;
+            }
+            
+            if (newPassword !== confirmNewPassword) {
+                changePasswordError.textContent = 'Yeni şifreler eşleşmiyor.';
+                changePasswordError.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .eq('password', currentPassword)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (data) {
+                    await updateInSupabase('users', currentUser.id, { password: newPassword });
+                    currentUser.password = newPassword;
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    closeChangePasswordModal();
+                    
+                    // Clear form
+                    currentPasswordInput.value = '';
+                    newPasswordInput.value = '';
+                    confirmNewPasswordInput.value = '';
+                    
+                    alert('Şifreniz başarıyla değiştirildi.');
+                } else {
+                    changePasswordError.textContent = 'Mevcut şifre hatalı.';
+                    changePasswordError.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Change password error:', error);
+                changePasswordError.textContent = 'Şifre değiştirilirken bir hata oluştu.';
+                changePasswordError.classList.remove('hidden');
+            }
+        }
+
+        // Open change password modal
+        function openChangePasswordModal() {
+            changePasswordModal.classList.add('active');
+        }
+
+        // Close change password modal
+        function closeChangePasswordModal() {
+            changePasswordModal.classList.remove('hidden');
+            changePasswordError.classList.add('hidden');
+        }
+
+        // Update connection indicator
+        function updateConnectionIndicator(status) {
+            connectionIndicator.className = 'connection-indicator ' + status;
+        }
 
         // Check connection status
         async function checkConnection() {
+            updateConnectionIndicator('connecting');
+            
             try {
                 const { data, error } = await supabase.from('players').select('count', { count: 'exact', head: true });
                 if (error) throw error;
-                connectionStatus.innerHTML = '<span class="text-green-600"><i class="fas fa-circle mr-1"></i> Çevrimiçi</span>';
+                updateConnectionIndicator('online');
             } catch (error) {
-                connectionStatus.innerHTML = '<span class="text-red-600"><i class="fas fa-circle mr-1"></i> Çevrimdışı</span>';
+                updateConnectionIndicator('offline');
                 console.error('Connection error:', error);
             }
         }
@@ -624,7 +889,7 @@
         }
 
         // Initialize the application
-        async function init() {
+        async function initApp() {
             // Check connection and load data
             await checkConnection();
             await loadDataFromSupabase();
@@ -659,33 +924,53 @@
         // Set up real-time subscriptions
         function setupRealtimeSubscriptions() {
             // Players subscription
-            supabase
+            const playersChannel = supabase
                 .channel('players-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'players' 
+                }, (payload) => {
+                    console.log('Players change:', payload);
                     loadDataFromSupabase();
                 })
                 .subscribe();
 
             // Game types subscription
-            supabase
+            const gameTypesChannel = supabase
                 .channel('game-types-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'game_types' }, () => {
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'game_types' 
+                }, (payload) => {
+                    console.log('Game types change:', payload);
                     loadDataFromSupabase();
                 })
                 .subscribe();
 
             // Games subscription
-            supabase
+            const gamesChannel = supabase
                 .channel('games-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'games' }, () => {
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'games' 
+                }, (payload) => {
+                    console.log('Games change:', payload);
                     loadDataFromSupabase();
                 })
                 .subscribe();
 
             // Stats subscription
-            supabase
+            const statsChannel = supabase
                 .channel('stats-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'stats' }, () => {
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'stats' 
+                }, (payload) => {
+                    console.log('Stats change:', payload);
                     loadDataFromSupabase();
                 })
                 .subscribe();
@@ -2048,8 +2333,18 @@
             confirmModal.classList.remove('active');
         }
 
+        // Event listeners
+        loginBtn.addEventListener('click', login);
+        logoutBtn.addEventListener('click', logout);
+        changePasswordBtn.addEventListener('click', openChangePasswordModal);
+        cancelChangePasswordBtn.addEventListener('click', closeChangePasswordModal);
+        confirmChangePasswordBtn.addEventListener('click', changePassword);
+
         // Initialize the application
-        init();
+        checkLoggedInUser();
+        
+        // Check connection periodically
+        setInterval(checkConnection, 30000); // Check every 30 seconds
     </script>
 </body>
 </html>
